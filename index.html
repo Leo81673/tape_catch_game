@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
-  <title>BAR CATCH — Mini Game</title>
+  <title>TAPEMON GO!</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -12,8 +12,8 @@
       <div class="brand">
         <div class="logo">🍸</div>
         <div>
-          <div class="title">BAR CATCH</div>
-          <div class="sub">Swipe down to charge, swipe up to throw</div>
+          <div class="title">TAPEMON GO!</div>
+          <div class="sub">Tap and hold to charge, release to throw</div>
         </div>
       </div>
 
@@ -28,88 +28,54 @@
       <canvas id="cv"></canvas>
 
       <div class="hud">
-        <div id="hint" class="hint">👇 아래로 스와이프(장전) → 👆 위로 스와이프(던지기)</div>
-        <div id="toast" class="toast hidden"></div>
+        <div id="hint" class="hint">👇 Tap & Hold(Charge) → 손을 떼면 Throw</div>
       </div>
 
       <section class="panel">
         <div class="panel-row">
           <button id="btnStart" class="btn primary">플레이 시작</button>
-          <button id="btnReset" class="btn">점수 초기화</button>
         </div>
 
         <details class="details" open>
           <summary>옵션</summary>
           <div class="opt-grid">
             <label class="opt">
-              <input type="checkbox" id="optTapThrow" checked />
-              탭으로도 던지기(초보)
-            </label>
-
-            <label class="opt">
-              <input type="checkbox" id="optSound" checked />
-              사운드
-            </label>
-
-            <label class="opt">
-              <input type="checkbox" id="optShowGuide" checked />
-              안내 문구 표시
-            </label>
-
-            <label class="opt">
               <input type="checkbox" id="optMotionThrow" />
               고급: 모션(자이로) 던지기 (iPhone은 권한 필요)
-            </label>
-
-            <label class="opt">
-              민감도 <span id="sensVal" class="mono">1.00</span>
-              <input type="range" id="optSensitivity" min="0.6" max="1.6" step="0.05" value="1.0" />
-            </label>
-
-            <label class="opt">
-              난이도(속도) <span id="diffVal" class="mono">2</span>
-              <input type="range" id="optDifficulty" min="1" max="5" step="1" value="2" />
-            </label>
-
-            <label class="opt">
-              쿠폰 ON <span class="mono" id="couponState">ON</span>
-              <input type="checkbox" id="optCoupon" checked />
-            </label>
-
-            <label class="opt">
-              쿠폰 쿨다운(분) <span id="cdVal" class="mono">30</span>
-              <input type="range" id="optCouponCooldown" min="5" max="120" step="5" value="30" />
             </label>
           </div>
         </details>
 
         <details class="details">
-          <summary>오늘의 리더보드(이 기기 기준)</summary>
+          <summary>리더보드(현재: 이 기기 내 저장)</summary>
           <div class="lb">
             <div class="panel-row">
               <input id="nickname" class="input" maxlength="6" placeholder="닉네임(최대 6자)" />
               <button id="btnSubmit" class="btn">점수 등록</button>
             </div>
             <div id="lbList" class="lbList"></div>
-            <div class="note">※ 현재는 “이 휴대폰/태블릿 내” 저장입니다(서버 리더보드는 원하시면 다음 단계로 확장 가능합니다).</div>
-          </div>
-        </details>
-
-        <details class="details">
-          <summary>iPhone 모션 권한(고급 옵션 사용 시)</summary>
-          <div class="note">
-            iPhone은 모션 센서 접근이 기본적으로 막혀있을 수 있어요.<br/>
-            “고급: 모션 던지기”를 켠 뒤, 시작 버튼을 누르면 권한 요청이 뜰 수 있습니다.
+            <div class="note">
+              ※ 다음 단계에서 “서버 리더보드(모든 접속자 공유 TOP10)”로 바꿔드릴 수 있습니다.
+            </div>
           </div>
         </details>
       </section>
     </main>
+  </div>
 
-    <footer class="foot">
-      <div class="note small">
-        ⚠️ 캐릭터/볼은 오리지널입니다(포켓몬/피카츄/포켓볼 직접 사용 X).
+  <!-- 쿠폰 모달(사용자가 닫기 전까지 유지) -->
+  <div id="couponModal" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="modal-card">
+      <div class="modal-title">🎟 쿠폰 획득!</div>
+      <div class="modal-body">
+        <div class="modal-line">바텐더에게 이 화면을 보여주세요.</div>
+        <div id="couponCode" class="coupon mono">—</div>
+        <div id="couponTime" class="modal-time mono">—</div>
       </div>
-    </footer>
+      <div class="modal-actions">
+        <button id="btnCloseCoupon" class="btn primary">확인</button>
+      </div>
+    </div>
   </div>
 
   <script src="main.js"></script>
