@@ -7,6 +7,11 @@
 
 *{box-sizing:border-box}
 html,body{height:100%}
+html, body, #wrap, #cv{
+  -webkit-user-select:none;
+  user-select:none;
+  -webkit-touch-callout:none;
+}
 body{
   margin:0;
   font-family: ui-sans-serif, system-ui, -apple-system, "Apple SD Gothic Neo", "Noto Sans KR", Segoe UI, Roboto, Helvetica, Arial, sans-serif;
@@ -43,6 +48,7 @@ body{
 .main{margin-top:12px}
 #cv{
   width:100%;
+  -webkit-tap-highlight-color: transparent;
   height:52vh;
   min-height:340px;
   border-radius:18px;
