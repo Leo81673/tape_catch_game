@@ -8,6 +8,7 @@
   const TARGET_HIT_RADIUS = 18;      // ✅ 히트박스 반경(px). PNG 크기와 분리(추천)
   const TARGET_IMG_SRC = "target.png"; // ✅ PNG 쓰려면 같은 폴더에 target.png 업로드
   const USE_TARGET_IMAGE = true;     // PNG 사용할지 여부
+  const BUILD_VERSION = "v2026.02.11-2"; // 배포 확인용 버전(코드 수정 시 올리기)
   // =============================
 
   const $ = (id) => document.getElementById(id);
@@ -90,6 +91,7 @@
     dir: 1,
     vx: 0,
     hitR: TARGET_HIT_RADIUS,
+    prevX: 0,
 
     // image draw size (보이는 크기) - PNG 크기와 무관하게 여기서 스케일 조절 가능
     drawW: 64,
@@ -259,11 +261,13 @@
     // target initial
     target.y = world.h * 0.30;
     target.x = world.w * 0.5;
+    target.prevX = target.x;
     target.vx = difficultySpeed(state.difficulty);
     beep(990, 0.06, 0.06);
   }
 
   function updateTarget(dt) {
+    target.prevX = target.x;
     target.vx = difficultySpeed(state.difficulty);
     target.x += target.dir * target.vx * dt;
 
@@ -296,16 +300,23 @@
   function updateBall(dt) {
     if (!ball.active) return;
 
+    const prevX = ball.x;
+    const prevY = ball.y;
+
     const g = 1450;
     ball.vy += g * dt;
 
     ball.x += ball.vx * dt;
     ball.y += ball.vy * dt;
 
-    // 판정: 타겟 y 근처 & 내려오는 구간
-    const yWindow = 16;
-    if (Math.abs(ball.y - target.y) < yWindow && ball.vy > 0) {
-      judgeCatch();
+    // 판정: 내려오는 구간에서 이전 y -> 현재 y가 target.y 라인을 통과하면 체크
+    const crossedTargetLine = ball.vy > 0 && prevY <= target.y && ball.y >= target.y;
+    if (crossedTargetLine) {
+      const travelY = ball.y - prevY;
+      const t = travelY !== 0 ? clamp((target.y - prevY) / travelY, 0, 1) : 1;
+      const ballXAtCross = prevX + (ball.x - prevX) * t;
+      const targetXAtCross = target.prevX + (target.x - target.prevX) * t;
+      judgeCatch(ballXAtCross, targetXAtCross);
     }
 
     if (ball.y > world.h + 60 || ball.x < -60 || ball.x > world.w + 60) {
@@ -313,11 +324,11 @@
     }
   }
 
-  function judgeCatch() {
+  function judgeCatch(ballX = ball.x, targetX = target.x) {
     if (!ball.active) return;
     ball.active = false;
 
-    const dist = Math.abs(ball.x - target.x);
+    const dist = Math.abs(ballX - targetX);
 
     // 히트박스 기준으로 단계 판정
     const perfect = target.hitR * 0.35;
@@ -473,6 +484,13 @@
       ctx.fill();
     }
 
+    // 히트박스 시각화 (육안 판정 기준)
+    ctx.beginPath();
+    ctx.strokeStyle = "rgba(110,231,255,0.85)";
+    ctx.lineWidth = 2;
+    ctx.arc(0, 0, target.hitR, 0, Math.PI * 2);
+    ctx.stroke();
+
     ctx.restore();
   }
 
@@ -535,7 +553,7 @@
     if (state.holding) {
       ctx.fillText(`CHARGE ${Math.round(state.chargePower * 100)}%`, 18, 28);
     } else {
-      ctx.fillText("Tap & Hold → Release to throw", 18, 28);
+      ctx.fillText(`손을 떼면 Throw · ${BUILD_VERSION}`, 18, 28);
     }
 
     ctx.restore();
