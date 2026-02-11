@@ -429,6 +429,35 @@
     e.preventDefault?.();
   }
 
+  let activeTouchId = null;
+
+  function onTouchStart(e) {
+    if (!state.running) return;
+    if (activeTouchId !== null) return;
+
+    const t = e.changedTouches && e.changedTouches[0];
+    if (!t) return;
+
+    activeTouchId = t.identifier;
+    onPointerDown(e);
+  }
+
+  function onTouchMove(e) {
+    if (activeTouchId === null) return;
+    const touch = Array.from(e.touches || []).find((t) => t.identifier === activeTouchId);
+    if (!touch) return;
+    onPointerMove(e);
+  }
+
+  function onTouchEndOrCancel(e) {
+    if (activeTouchId === null) return;
+    const touch = Array.from(e.changedTouches || []).find((t) => t.identifier === activeTouchId);
+    if (!touch) return;
+
+    onPointerUp(e);
+    activeTouchId = null;
+  }
+
 
   // Render
   function drawBackground() {
@@ -562,7 +591,7 @@
   }
 
   // Events
-  // ✅ Pointer Events로 통합 (iOS/Android 공통 안정적)
+  // Pointer Events + Touch fallback (iOS Safari 호환)
   cv.addEventListener("pointerdown", (e) => {
     if (!state.running) return;
     cv.setPointerCapture?.(e.pointerId);     // 캔버스 밖으로 나가도 up/cancel 받기
@@ -577,6 +606,11 @@
     onPointerUp(e);
     cv.releasePointerCapture?.(e.pointerId);
   }, { passive: false });
+
+  window.addEventListener("pointerup", (e) => {
+    // iOS에서 캔버스 밖으로 나가면 cv pointerup 누락되는 경우 대비
+    onPointerUp(e);
+  }, { passive: false });
   
   cv.addEventListener("pointercancel", (e) => {
     // ✅ 취소되면 무조건 홀드 해제
@@ -584,6 +618,25 @@
     cv.releasePointerCapture?.(e.pointerId);
   }, { passive: false });
 
+  if (!window.PointerEvent) {
+    cv.addEventListener("touchstart", onTouchStart, { passive: false });
+    cv.addEventListener("touchmove", onTouchMove, { passive: false });
+    cv.addEventListener("touchend", onTouchEndOrCancel, { passive: false });
+    cv.addEventListener("touchcancel", onTouchEndOrCancel, { passive: false });
+  }
+
+  // iOS Safari long-press 선택/콜아웃 방지
+  cv.addEventListener("contextmenu", (e) => {
+    e.preventDefault();
+  }, { passive: false });
+
+  cv.addEventListener("selectstart", (e) => {
+    e.preventDefault();
+  }, { passive: false });
+
+  window.addEventListener("gesturestart", (e) => {
+    if (e.target === cv) e.preventDefault();
+  }, { passive: false });
 
 
   window.addEventListener("devicemotion", onDeviceMotion, { passive: true });
