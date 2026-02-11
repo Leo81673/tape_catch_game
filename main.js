@@ -562,16 +562,28 @@
   }
 
   // Events
-  cv.addEventListener("touchstart", onPointerDown, { passive: false });
-  cv.addEventListener("touchmove", onPointerMove, { passive: false });
-  cv.addEventListener("touchend", onPointerUp, { passive: false });
+  // ✅ Pointer Events로 통합 (iOS/Android 공통 안정적)
+  cv.addEventListener("pointerdown", (e) => {
+    if (!state.running) return;
+    cv.setPointerCapture?.(e.pointerId);     // 캔버스 밖으로 나가도 up/cancel 받기
+    onPointerDown(e);
+  }, { passive: false });
   
-  // ✅ 추가: 손가락이 화면 밖으로 나가거나 시스템이 터치를 취소하는 경우
-  window.addEventListener("touchend", onPointerUp, { passive: false });
-  window.addEventListener("touchcancel", onPointerUp, { passive: false });
+  cv.addEventListener("pointermove", (e) => {
+    onPointerMove(e);
+  }, { passive: false });
   
-  cv.addEventListener("mousedown", onPointerDown);
-  window.addEventListener("mouseup", onPointerUp);
+  cv.addEventListener("pointerup", (e) => {
+    onPointerUp(e);
+    cv.releasePointerCapture?.(e.pointerId);
+  }, { passive: false });
+  
+  cv.addEventListener("pointercancel", (e) => {
+    // ✅ 취소되면 무조건 홀드 해제
+    if (state.holding) endHold();
+    cv.releasePointerCapture?.(e.pointerId);
+  }, { passive: false });
+
 
 
   window.addEventListener("devicemotion", onDeviceMotion, { passive: true });
@@ -629,6 +641,7 @@
 
   init();
 })();
+
 
 
 
