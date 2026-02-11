@@ -5,7 +5,7 @@
   const DEFAULT_DIFFICULTY = 2;      // 1~5  (타겟 이동 속도)
   const DEFAULT_SENSITIVITY = 2;   // 내부 계산용(현재 고정)
   const COUPON_COOLDOWN_MS = 2 * 60 * 60 * 1000; // 2시간
-  const TARGET_HIT_RADIUS = 18;      // ✅ 히트박스 반경(px). PNG 크기와 분리(추천)
+  const TARGET_HIT_RADIUS = 24;      // ✅ 히트박스 반경(px). PNG 크기와 분리(추천)
   const TARGET_IMG_SRC = "target.png"; // ✅ PNG 쓰려면 같은 폴더에 target.png 업로드
   const USE_TARGET_IMAGE = true;     // PNG 사용할지 여부
   const BUILD_VERSION = "v2026.02.11-2"; // 배포 확인용 버전(코드 수정 시 올리기)
@@ -712,6 +712,7 @@
 
   init();
 })();
+
 
 
 
