@@ -1,12 +1,7 @@
 :root{
   --bg:#0b0f14;
-  --card:#111824;
-  --card2:#0f1621;
   --text:#eaf0ff;
   --muted:#9fb0cc;
-  --accent:#6ee7ff;
-  --accent2:#a8ff6e;
-  --danger:#ff6e8a;
   --border:rgba(255,255,255,0.10);
 }
 
@@ -53,7 +48,7 @@ body{
   border-radius:18px;
   border:1px solid var(--border);
   background: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02));
-  touch-action:none; /* 중요: 모바일 제스처 막고 게임 입력 받기 */
+  touch-action:none;
   display:block;
 }
 
@@ -63,23 +58,10 @@ body{
   padding:10px 12px;
   border-radius:12px;
   border:1px dashed rgba(110,231,255,0.35);
-  color:rgba(234,240,255,0.92);
   background: rgba(110,231,255,0.06);
   font-size:13px;
+  color:rgba(234,240,255,0.92);
 }
-.toast{
-  position:absolute;
-  left:50%;
-  transform:translateX(-50%);
-  top:-56px;
-  padding:10px 12px;
-  border-radius:999px;
-  border:1px solid var(--border);
-  background: rgba(17,24,36,0.92);
-  backdrop-filter: blur(8px);
-  font-weight:700;
-}
-.hidden{display:none}
 
 .panel{
   margin-top:12px;
@@ -110,19 +92,13 @@ body{
   padding:10px;
   background: rgba(15,22,33,0.55);
 }
-.details summary{
-  cursor:pointer;
-  font-weight:800;
-  color: rgba(234,240,255,0.95);
-}
+.details summary{cursor:pointer;font-weight:800}
+
 .opt-grid{
   margin-top:10px;
   display:grid;
   grid-template-columns: 1fr;
   gap:10px;
-}
-@media (min-width: 720px){
-  .opt-grid{grid-template-columns: 1fr 1fr;}
 }
 .opt{
   display:flex;
@@ -135,10 +111,10 @@ body{
   padding:10px 12px;
   font-size:14px;
 }
-.opt input[type="range"]{width:190px;max-width:46vw}
-.mono{font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;}
+
 .note{margin-top:10px;color:var(--muted);font-size:13px;line-height:1.45}
-.note.small{font-size:12px}
+.mono{font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;}
+
 .input{
   flex:1;
   min-width: 180px;
@@ -164,4 +140,38 @@ body{
   font-size:14px;
 }
 .lbRow:first-child{border-top:none}
-.foot{margin-top:12px}
+
+/* 쿠폰 모달 */
+.hidden{display:none}
+.modal{
+  position:fixed; inset:0;
+  background: rgba(0,0,0,0.55);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:16px;
+  z-index:9999;
+}
+.modal-card{
+  width:min(520px, 100%);
+  border-radius:18px;
+  border:1px solid rgba(255,255,255,0.14);
+  background: rgba(17,24,36,0.95);
+  backdrop-filter: blur(10px);
+  padding:16px;
+}
+.modal-title{font-weight:900;font-size:18px}
+.modal-body{margin-top:10px}
+.modal-line{color:rgba(234,240,255,0.86);font-size:14px}
+.coupon{
+  margin-top:10px;
+  font-size:26px;
+  padding:12px;
+  border-radius:14px;
+  border:1px dashed rgba(110,231,255,0.45);
+  background: rgba(110,231,255,0.08);
+  text-align:center;
+  letter-spacing: 1px;
+}
+.modal-time{margin-top:8px;color:rgba(234,240,255,0.75);text-align:center}
+.modal-actions{margin-top:14px;display:flex;justify-content:center}
