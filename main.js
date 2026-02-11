@@ -582,7 +582,7 @@
     if (state.holding) {
       ctx.fillText(`CHARGE ${Math.round(state.chargePower * 100)}%`, 18, 28);
     } else {
-      ctx.fillText(`손을 떼면 Throw · ${BUILD_VERSION}`, 18, 28);
+      ctx.fillText(`누르고 아래로 스와이프 & 손을 떼면 Throw · ${BUILD_VERSION}`, 18, 28);
     }
 
     ctx.restore();
@@ -712,6 +712,7 @@
 
   init();
 })();
+
 
 
 
