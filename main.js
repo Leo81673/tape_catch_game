@@ -2,7 +2,7 @@
   // =============================
   // ===== 운영자 설정(여기만 수정) =====
   // =============================
-  const DEFAULT_DIFFICULTY = 3.5;      // 1~5  (타겟 이동 속도)
+  const DEFAULT_DIFFICULTY = 3.0;      // 1~5  (타겟 이동 속도)
   const DEFAULT_SENSITIVITY = 2;   // 내부 계산용(현재 고정)
   const COUPON_COOLDOWN_MS = 2 * 60 * 60 * 1000; // 2시간
   const TARGET_HIT_RADIUS = 18;      // ✅ 히트박스 반경(px). PNG 크기와 분리(추천)
@@ -641,6 +641,7 @@
 
   init();
 })();
+
 
 
 
