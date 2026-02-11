@@ -385,10 +385,21 @@
   // Input (tap hold / release)
   function getPoint(e) {
     const rect = cv.getBoundingClientRect();
-    const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
-    const y = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
+  
+    // ✅ touchend/touchcancel 에서는 touches가 비어있고 changedTouches에 있음
+    const t =
+      (e.touches && e.touches[0]) ||
+      (e.changedTouches && e.changedTouches[0]) ||
+      null;
+  
+    const clientX = t ? t.clientX : e.clientX;
+    const clientY = t ? t.clientY : e.clientY;
+  
+    const x = clientX - rect.left;
+    const y = clientY - rect.top;
     return { x, y };
   }
+
 
   function onPointerDown(e) {
     if (!state.running) return;
@@ -614,4 +625,5 @@
 
   init();
 })();
+
 
