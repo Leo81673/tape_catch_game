@@ -416,15 +416,19 @@
   function onPointerUp(e) {
     if (!state.running) return;
     if (!state.holding) return;
-
+  
     const p = getPoint(e);
     const power = clamp(state.chargePower, 0.08, 1.0);
-
-    // 모션 던지기가 켜져 있으면: 기본은 “손 떼면 던짐” 유지 + 모션은 보너스 트리거로만 동작
-    launchBall(power, p.x);
+  
+    // ✅ 먼저 hold 상태부터 무조건 해제 (stuck 방지)
     endHold();
+  
+    // 던지기
+    launchBall(power, p.x);
+  
     e.preventDefault?.();
   }
+
 
   // Render
   function drawBackground() {
@@ -625,5 +629,6 @@
 
   init();
 })();
+
 
 
