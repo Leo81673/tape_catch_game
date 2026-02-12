@@ -17,10 +17,10 @@ import {
   const USE_TARGET_IMAGE = true;     // PNG 사용할지 여부
   const BUILD_VERSION = "5콤보시 쿠폰 증정!"; // 배포 확인용 버전(코드 수정 시 올리기)
   const COMBO_DIFFICULTY_SETTINGS = {
-    combo2Plus: { suddenTurnChance: 0.012, hitRadius: 18 },
-    combo3Plus: { suddenTurnChance: 0.012, hitRadius: 16 },
-    combo4Plus: { suddenTurnChance: 0.012, hitRadius: 14 },
-    combo5Plus: { suddenTurnChance: 0.012, hitRadius: 13 },
+    combo2Plus: { suddenTurnChance: 0.010, hitRadius: 18 },
+    combo3Plus: { suddenTurnChance: 0.010, hitRadius: 16 },
+    combo4Plus: { suddenTurnChance: 0.010, hitRadius: 14 },
+    combo5Plus: { suddenTurnChance: 0.010, hitRadius: 13 },
   };
 
   // ===== 타겟(몬스터) 정의 =====
