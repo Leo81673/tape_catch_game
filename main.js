@@ -15,7 +15,7 @@ import {
   const IRREGULAR_SPEED_MIN = 0.6;   // 불규칙 속도 최소 배율
   const IRREGULAR_SPEED_MAX = 1.1;   // 불규칙 속도 최대 배율
   const USE_TARGET_IMAGE = true;     // PNG 사용할지 여부
-  const BUILD_VERSION = "5콤보시 쿠폰 증정!_1"; // 배포 확인용 버전(코드 수정 시 올리기)
+  const BUILD_VERSION = "5콤보시 쿠폰 증정!_1909"; // 배포 확인용 버전(코드 수정 시 올리기)
 
   // ===== 타겟(몬스터) 정의 =====
   const TARGET_DEFS = [
