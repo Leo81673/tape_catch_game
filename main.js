@@ -11,6 +11,43 @@
   const BUILD_VERSION = "3콤보시 1샷 증정!_6"; // 배포 확인용 버전(코드 수정 시 올리기)
   // =============================
 
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+  import {
+    getFirestore, collection, addDoc, serverTimestamp,
+    query, where, orderBy, limit, onSnapshot
+  } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+  
+  import { getCountFromServer } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+
+  const firebaseConfig = {
+  apiKey: "…",
+  authDomain: "…",
+  projectId: "…",
+  storageBucket: "…",
+  messagingSenderId: "…",
+  appId: "…"
+};
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
+  // =====================
+  // 48시간 리더보드 버킷 설정
+  // =====================
+  const BUCKET_MS = 48 * 60 * 60 * 1000;
+
+  // 🔴 여기 날짜를 게임 오픈일 00:00 (한국시간)으로 설정하세요
+  // 예: 2026년 2월 12일 오픈이면 아래 그대로 사용
+  const RESET_ANCHOR_KST = "2026-02-12T00:00:00+09:00";
+  
+  function currentBucketId() {
+    const anchor = new Date(RESET_ANCHOR_KST).getTime();
+    const now = Date.now();
+    return Math.floor((now - anchor) / BUCKET_MS);
+}
+
+
+
   const $ = (id) => document.getElementById(id);
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
@@ -255,6 +292,39 @@
     }).join("");
   }
 
+    function listenTop10() {
+    const bucketId = currentBucketId();
+  
+    const topQ = query(
+      collection(db, "scores"),
+      where("bucketId", "==", bucketId),
+      orderBy("score", "desc"),
+      limit(10)
+    );
+  
+    return onSnapshot(topQ, (qs) => {
+      const list = $("lbList");
+  
+      if (qs.empty) {
+        list.innerHTML = `<div class="lbRow"><span>아직 기록이 없어요</span><span>—</span></div>`;
+        return;
+      }
+  
+      let i = 1;
+      const rows = [];
+      qs.forEach((doc) => {
+        const d = doc.data();
+        rows.push(
+          `<div class="lbRow"><span>#${i} ${escapeHtml((d.name||"NONAME").slice(0,6))}</span><span class="mono">${d.score||0}</span></div>`
+        );
+        i++;
+      });
+  
+      list.innerHTML = rows.join("");
+    });
+  }
+
+  
   // Coupon modal (persistent)
   function showCouponModal(code, timeText) {
     $("couponCode").textContent = code;
@@ -862,15 +932,46 @@
     hideCouponModal();
   });
 
-  $("btnSubmit").addEventListener("click", () => {
+  $("btnSubmit").addEventListener("click", async () => {
     const name = ($("nickname").value || "").trim().slice(0, 6);
-    if (!name) { beep(220, 0.06, 0.05); return; }
-    const lb = getLB();
-    lb.push({ name, score: state.score, at: Date.now() });
-    setLB(lb);
-    renderLB();
-    beep(920, 0.05, 0.05);
+    if (!name) return;
+  
+    const score = state.score | 0;
+    const bucketId = currentBucketId();
+    const clientId = getClientId();
+  
+    // 점수 저장 (데이터는 계속 누적)
+    await addDoc(collection(db, "scores"), {
+      name,
+      score,
+      bucketId,
+      clientId,
+      createdAt: serverTimestamp()
+    });
+  
+    // 🔹 현재 버킷에서 나보다 높은 점수 개수 계산
+    const higherQ = query(
+      collection(db, "scores"),
+      where("bucketId", "==", bucketId),
+      where("score", ">", score)
+    );
+  
+    const snap = await getCountFromServer(higherQ);
+    const rank = snap.data().count + 1;
+  
+    alert(`등록 완료! 현재 ${rank}등 입니다.`);
   });
+
+    function getClientId() {
+    let id = localStorage.getItem("tapemongo_clientId");
+    if (!id) {
+      id = crypto.randomUUID ? crypto.randomUUID() : String(Math.random()).slice(2);
+      localStorage.setItem("tapemongo_clientId", id);
+    }
+    return id;
+  }
+
+
 
   // roundRect polyfill (older Safari)
   if (!CanvasRenderingContext2D.prototype.roundRect) {
@@ -891,12 +992,15 @@
     resize();
     loadLocal();
     syncUI();
-    renderLB();
+    listenTop10();   // 🔥 서버 리더보드
     requestAnimationFrame(tick);
   }
 
+  
+  
   init();
 })();
+
 
 
 
