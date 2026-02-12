@@ -43,7 +43,22 @@ body{
   border:1px solid var(--border);
   background: rgba(255,255,255,0.04);
   font-size:13px;
+  min-width:72px;
+  text-align:center;
+  transition: background 0.25s, border-color 0.25s, color 0.25s, transform 0.15s;
 }
+.pill.combo-pop{
+  animation: comboPop 0.35s ease-out;
+}
+@keyframes comboPop{
+  0%{transform:scale(1)}
+  40%{transform:scale(1.25)}
+  100%{transform:scale(1)}
+}
+.combo-1{background:rgba(110,231,255,0.18);border-color:rgba(110,231,255,0.45);color:#6ee7ff}
+.combo-2{background:rgba(168,130,255,0.22);border-color:rgba(168,130,255,0.50);color:#c8a0ff}
+.combo-3{background:rgba(255,215,0,0.25);border-color:rgba(255,215,0,0.55);color:#ffd700;font-weight:700}
+.combo-max{background:linear-gradient(135deg,rgba(255,100,100,0.30),rgba(255,215,0,0.30),rgba(110,255,168,0.30),rgba(110,200,255,0.30));border-color:rgba(255,215,0,0.60);color:#fff;font-weight:700;text-shadow:0 0 8px rgba(255,215,0,0.6)}
 
 .main{margin-top:12px}
 #cv{
