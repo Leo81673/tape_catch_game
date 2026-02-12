@@ -27,7 +27,7 @@ body{
   padding:12px 12px;border:1px solid var(--border);border-radius:14px;
   background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03));
 }
-.brand{display:flex;gap:10px;align-items:center}
+.brand{display:flex;gap:10px;align-items:center;min-width:0;flex-shrink:1;overflow:hidden}
 .logo{
   width:44px;height:44px;border-radius:12px;
   display:flex;align-items:center;justify-content:center;
@@ -37,13 +37,15 @@ body{
 }
 .title{font-weight:800;letter-spacing:0.5px}
 .sub{font-size:12px;color:var(--muted)}
-.status{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.status{display:flex;gap:8px;flex-wrap:nowrap;flex-shrink:0;justify-content:flex-end}
 .pill{
   padding:8px 10px;border-radius:999px;
   border:1px solid var(--border);
   background: rgba(255,255,255,0.04);
   font-size:13px;
   min-width:72px;
+  width:max-content;
+  white-space:nowrap;
   text-align:center;
   transition: background 0.25s, border-color 0.25s, color 0.25s, transform 0.15s;
 }
@@ -59,6 +61,7 @@ body{
 .combo-2{background:rgba(168,130,255,0.22);border-color:rgba(168,130,255,0.50);color:#c8a0ff}
 .combo-3{background:rgba(255,215,0,0.25);border-color:rgba(255,215,0,0.55);color:#ffd700;font-weight:700}
 .combo-max{background:linear-gradient(135deg,rgba(255,100,100,0.30),rgba(255,215,0,0.30),rgba(110,255,168,0.30),rgba(110,200,255,0.30));border-color:rgba(255,215,0,0.60);color:#fff;font-weight:700;text-shadow:0 0 8px rgba(255,215,0,0.6)}
+.catch-pill{background:rgba(255,180,60,0.15);border-color:rgba(255,180,60,0.40);color:#ffb43c}
 
 .main{margin-top:12px}
 #cv{
