@@ -15,15 +15,15 @@ import {
   const IRREGULAR_SPEED_MIN = 0.6;   // 불규칙 속도 최소 배율
   const IRREGULAR_SPEED_MAX = 1.1;   // 불규칙 속도 최대 배율
   const USE_TARGET_IMAGE = true;     // PNG 사용할지 여부
-  const BUILD_VERSION = "5콤보시 쿠폰 증정!_34"; // 배포 확인용 버전(코드 수정 시 올리기)
+  const BUILD_VERSION = "5콤보시 쿠폰 증정!_1"; // 배포 확인용 버전(코드 수정 시 올리기)
 
   // ===== 타겟(몬스터) 정의 =====
   const TARGET_DEFS = [
-    { src: "target.png",  name: "피카츄",   weight: 30 },
-    { src: "target2.png", name: "파이리",   weight: 30 },
-    { src: "target3.png", name: "꼬부기",   weight: 30 },
-    { src: "target4.png", name: "뮤츠", weight: 5  },
-    { src: "target5.png", name: "뮤", weight: 5  },
+    { src: "target.png",  name: "피카츄",   weight: 32 },
+    { src: "target2.png", name: "파이리",   weight: 32 },
+    { src: "target3.png", name: "이상해씨",   weight: 32 },
+    { src: "target4.png", name: "뮤츠", weight: 3  },
+    { src: "target5.png", name: "뮤", weight: 1  },
   ];
   const CATCH_COMBO_THRESHOLD = 3; // 이 콤보 달성 시 타겟 포획
   // =============================
