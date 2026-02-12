@@ -156,15 +156,18 @@ body{
   overflow:hidden;
 }
 .lbRow{
-  display:flex;
-  justify-content:space-between;
-  gap:10px;
+  display:grid;
+  grid-template-columns: 1fr 40px 50px 46px;
+  gap:6px;
   padding:10px 12px;
   background: rgba(255,255,255,0.02);
   border-top:1px solid rgba(255,255,255,0.06);
   font-size:14px;
+  align-items:center;
 }
 .lbRow:first-child{border-top:none}
+.lbRow span:not(:first-child){text-align:center}
+.lbHeader{background:rgba(255,255,255,0.06);font-weight:700;font-size:12px;color:var(--muted)}
 
 /* 쿠폰 모달 */
 .hidden{display:none}

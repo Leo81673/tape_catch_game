@@ -134,6 +134,7 @@ import {
 
     score: 0,
     combo: 0,
+    maxCombo: 0,
     best: 0,
 
     difficulty: DEFAULT_DIFFICULTY,
@@ -346,16 +347,19 @@ import {
   }
   function renderServerRows(rows) {
     const list = $("lbList");
+    // 헤더
+    const header = `<div class="lbRow lbHeader"><span>ID</span><span class="mono">수집</span><span class="mono">점수</span><span class="mono">콤보</span></div>`;
     if (!rows.length) {
-      list.innerHTML = `<div class="lbRow"><span>아직 기록이 없어요</span><span>—</span></div>`;
+      list.innerHTML = header + `<div class="lbRow"><span>아직 기록이 없어요</span><span>—</span><span>—</span><span>—</span></div>`;
       return;
     }
 
-    list.innerHTML = rows.map((d, idx) => {
+    list.innerHTML = header + rows.map((d, idx) => {
       const safeName = escapeHtml((d.name || "NONAME").slice(0, 15));
       const score = Number(d.score) || 0;
       const monsters = Number(d.monsters) || 0;
-      return `<div class="lbRow"><span>#${idx + 1} ${safeName}</span><span class="mono">${monsters}마리 / ${score}점</span></div>`;
+      const maxCombo = Number(d.maxCombo) || 0;
+      return `<div class="lbRow"><span>#${idx + 1} ${safeName}</span><span class="mono">${monsters}</span><span class="mono">${score}</span><span class="mono">${maxCombo}</span></div>`;
     }).join("");
   }
 
@@ -374,7 +378,9 @@ import {
       qs.forEach((doc) => rows.push(doc.data()));
 
       rows.sort((a, b) => {
-        // 몬스터 수 우선, 같으면 점수 높은 순
+        // 콤보 > 수집 > 점수 순으로 랭킹
+        const byCombo = (Number(b.maxCombo) || 0) - (Number(a.maxCombo) || 0);
+        if (byCombo !== 0) return byCombo;
         const byMonsters = (Number(b.monsters) || 0) - (Number(a.monsters) || 0);
         if (byMonsters !== 0) return byMonsters;
         const byScore = (Number(b.score) || 0) - (Number(a.score) || 0);
@@ -417,7 +423,7 @@ import {
     return `${y}-${mo}-${d} ${hh}:${mm}`;
   }
   // 축하 연출 상태
-  const celebration = { active: false, until: 0 };
+  const celebration = { active: false, until: 0, triggered: false };
 
   function maybeCatchTarget() {
     if (state.combo < CATCH_COMBO_THRESHOLD) return;
@@ -426,8 +432,9 @@ import {
     const name = currentTargetDef.name;
     state.caughtSet.add(name);
 
-    // 모두 잡았는지 체크
-    if (state.caughtSet.size >= TARGET_DEFS.length) {
+    // 모두 잡았는지 체크 (최초 1회만 축하 연출)
+    if (state.caughtSet.size >= TARGET_DEFS.length && !celebration.triggered) {
+      celebration.triggered = true;
       catchMsg.text = "몬스터를 모두 잡았다!";
       catchMsg.until = performance.now() + 4000;
       celebration.active = true;
@@ -441,7 +448,7 @@ import {
       beep(1500, 0.12, 0.1);
       setTimeout(() => beep(1800, 0.12, 0.1), 150);
       setTimeout(() => beep(2200, 0.15, 0.1), 300);
-    } else {
+    } else if (state.caughtSet.size < TARGET_DEFS.length) {
       // 포획 메시지 표시
       catchMsg.text = `${name}을(를) 잡았다!`;
       catchMsg.until = performance.now() + 2000;
@@ -540,8 +547,8 @@ import {
       const interval = Math.max(0.5, 1.8 - state.combo * 0.12);
       if (irregularTimer >= interval) {
         irregularTimer = 0;
-        // 0.8 ~ 1.8 사이의 랜덤 속도 배율
-        irregularSpeedMul = 0.8 + Math.random() * 1.0;
+        // 0.6 ~ 1.2 사이의 랜덤 속도 배율
+        irregularSpeedMul = 0.6 + Math.random() * 0.6;
       }
       speed *= irregularSpeedMul;
 
@@ -667,6 +674,7 @@ import {
 
     // 콤보를 먼저 증가시킨 후 피드백 표시 (숫자 일치)
     state.combo += 1;
+    if (state.combo > state.maxCombo) state.maxCombo = state.combo;
     showJudgeFeedback(label);
 
     const comboMul = 1 + Math.min(0.6, state.combo * 0.06);
@@ -1117,10 +1125,12 @@ import {
 
     try {
       const monsters = state.caughtSet.size;
+      const maxCombo = state.maxCombo;
       await addDoc(collection(db, "scores"), {
         name,
         score,
         monsters,
+        maxCombo,
         bucketId,
         clientId,
         createdAt: serverTimestamp()
@@ -1133,15 +1143,18 @@ import {
       const allScores = [];
       bucketSnap.forEach((doc) => allScores.push(doc.data()));
       allScores.sort((a, b) => {
+        const byCombo = (Number(b.maxCombo) || 0) - (Number(a.maxCombo) || 0);
+        if (byCombo !== 0) return byCombo;
         const byMonsters = (Number(b.monsters) || 0) - (Number(a.monsters) || 0);
         if (byMonsters !== 0) return byMonsters;
         return (Number(b.score) || 0) - (Number(a.score) || 0);
       });
 
       const higherCount = allScores.filter((row) => {
+        const rc = Number(row.maxCombo) || 0;
         const rm = Number(row.monsters) || 0;
         const rs = Number(row.score) || 0;
-        return rm > monsters || (rm === monsters && rs > score);
+        return rc > maxCombo || (rc === maxCombo && rm > monsters) || (rc === maxCombo && rm === monsters && rs > score);
       }).length;
       const rank = higherCount + 1;
 
