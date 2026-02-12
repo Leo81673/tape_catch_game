@@ -8,7 +8,7 @@
   const TARGET_HIT_RADIUS = 24;      // ✅ 히트박스 반경(px). PNG 크기와 분리(추천)
   const TARGET_IMG_SRC = "target.png"; // ✅ PNG 쓰려면 같은 폴더에 target.png 업로드
   const USE_TARGET_IMAGE = true;     // PNG 사용할지 여부
-  const BUILD_VERSION = "3콤보시 1샷 증정!"; // 배포 확인용 버전(코드 수정 시 올리기)
+  const BUILD_VERSION = "3콤보시 1샷 증정!_2"; // 배포 확인용 버전(코드 수정 시 올리기)
   // =============================
 
   const $ = (id) => document.getElementById(id);
@@ -763,6 +763,7 @@
 
   init();
 })();
+
 
 
 
