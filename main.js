@@ -12,8 +12,10 @@ import {
   const DEFAULT_SENSITIVITY = 2;   // 내부 계산용(현재 고정)
   const COUPON_COOLDOWN_MS = 2 * 60 * 60 * 1000; // 2시간
   const TARGET_HIT_RADIUS = 18;      // ✅ 히트박스 반경(px). PNG 크기와 분리(추천)
+  const IRREGULAR_SPEED_MIN = 0.6;   // 불규칙 속도 최소 배율
+  const IRREGULAR_SPEED_MAX = 1.1;   // 불규칙 속도 최대 배율
   const USE_TARGET_IMAGE = true;     // PNG 사용할지 여부
-  const BUILD_VERSION = "3콤보시 1샷 증정!_33"; // 배포 확인용 버전(코드 수정 시 올리기)
+  const BUILD_VERSION = "5콤보시 쿠폰 증정!_34"; // 배포 확인용 버전(코드 수정 시 올리기)
 
   // ===== 타겟(몬스터) 정의 =====
   const TARGET_DEFS = [
@@ -467,9 +469,9 @@ import {
   }
 
   function maybeShowCouponOnCombo3() {
-    // 3연속 콤보일때만 (3,6,9... 도 “3연속” 달성으로 보고 발급)
-    if (state.combo < 3) return;
-    if (state.combo % 3 !== 0) return;
+    // 5연속 콤보일때만 (5,10,15... 도 "5연속" 달성으로 보고 발급)
+    if (state.combo < 5) return;
+    if (state.combo % 5 !== 0) return;
 
     const nowMs = Date.now();
     if (nowMs - state.lastCouponAt < COUPON_COOLDOWN_MS) return;
@@ -547,8 +549,8 @@ import {
       const interval = Math.max(0.5, 1.8 - state.combo * 0.12);
       if (irregularTimer >= interval) {
         irregularTimer = 0;
-        // 0.6 ~ 1.2 사이의 랜덤 속도 배율
-        irregularSpeedMul = 0.6 + Math.random() * 0.6;
+        // 운영자 설정에 따른 랜덤 속도 배율
+        irregularSpeedMul = IRREGULAR_SPEED_MIN + Math.random() * (IRREGULAR_SPEED_MAX - IRREGULAR_SPEED_MIN);
       }
       speed *= irregularSpeedMul;
 
@@ -668,6 +670,11 @@ import {
       state.combo = 0;
       showJudgeFeedback(label);
       beep(220, 0.08, 0.06);
+
+      // miss 시 타겟 변경
+      const newDef = pickRandomTarget(currentTargetDef.src);
+      currentTargetDef = newDef;
+
       syncUI();
       return;
     }
