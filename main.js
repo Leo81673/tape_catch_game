@@ -1,3 +1,9 @@
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js";
+import {
+  getFirestore, collection, addDoc, serverTimestamp,
+  query, where, onSnapshot, getDocs
+} from "https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js";
+
 (() => {
   // =============================
   // ===== 운영자 설정(여기만 수정) =====
@@ -8,28 +14,28 @@
   const TARGET_HIT_RADIUS = 18;      // ✅ 히트박스 반경(px). PNG 크기와 분리(추천)
   const TARGET_IMG_SRC = "target.png"; // ✅ PNG 쓰려면 같은 폴더에 target.png 업로드
   const USE_TARGET_IMAGE = true;     // PNG 사용할지 여부
-  const BUILD_VERSION = "3콤보시 1샷 증정!_2"; // 배포 확인용 버전(코드 수정 시 올리기)
+  const BUILD_VERSION = "3콤보시 1샷 증정!_3"; // 배포 확인용 버전(코드 수정 시 올리기)
   // =============================
 
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
-  import {
-    getFirestore, collection, addDoc, serverTimestamp,
-    query, where, orderBy, limit, onSnapshot
-  } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
-  
-  import { getCountFromServer } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
-
   const firebaseConfig = {
-  apiKey: "…",
-  authDomain: "…",
-  projectId: "…",
-  storageBucket: "…",
-  messagingSenderId: "…",
-  appId: "…"
-};
+    apiKey: "AIzaSyDwXIjBRO-S8MLXS_mScveA845pUKY9fCA",
+    authDomain: "tape-seoul-catch.firebaseapp.com",
+    projectId: "tape-seoul-catch",
+    storageBucket: "tape-seoul-catch.firebasestorage.app",
+    messagingSenderId: "985851999683",
+    appId: "1:985851999683:web:a0634a1a7641d5c2f5b976",
+    measurementId: "G-ZSH3PSRRB3"
+  };
 
-  const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
+  let db = null;
+  let firebaseReady = false;
+  try {
+    const app = initializeApp(firebaseConfig);
+    db = getFirestore(app);
+    firebaseReady = true;
+  } catch (err) {
+    console.error("[Firebase] 초기화 실패", err);
+  }
 
   // =====================
   // 48시간 리더보드 버킷 설정
@@ -291,40 +297,48 @@
       return `<div class="lbRow"><span>#${i+1} ${escapeHtml(name)}</span><span class="mono">${sc}</span></div>`;
     }).join("");
   }
+  function renderServerRows(rows) {
+    const list = $("lbList");
+    if (!rows.length) {
+      list.innerHTML = `<div class="lbRow"><span>아직 기록이 없어요</span><span>—</span></div>`;
+      return;
+    }
 
-    function listenTop10() {
+    list.innerHTML = rows.map((d, idx) => {
+      const safeName = escapeHtml((d.name || "NONAME").slice(0, 6));
+      const score = Number(d.score) || 0;
+      return `<div class="lbRow"><span>#${idx + 1} ${safeName}</span><span class="mono">${score}</span></div>`;
+    }).join("");
+  }
+
+  function listenTop10() {
+    const list = $("lbList");
+    if (!firebaseReady || !db) {
+      list.innerHTML = `<div class="lbRow"><span>서버 연결 실패</span><span>Firebase 설정 확인</span></div>`;
+      return () => {};
+    }
+
     const bucketId = currentBucketId();
-  
-    const topQ = query(
-      collection(db, "scores"),
-      where("bucketId", "==", bucketId),
-      orderBy("score", "desc"),
-      limit(10)
-    );
-  
-    return onSnapshot(topQ, (qs) => {
-      const list = $("lbList");
-  
-      if (qs.empty) {
-        list.innerHTML = `<div class="lbRow"><span>아직 기록이 없어요</span><span>—</span></div>`;
-        return;
-      }
-  
-      let i = 1;
+    const q = query(collection(db, "scores"), where("bucketId", "==", bucketId));
+
+    return onSnapshot(q, (qs) => {
       const rows = [];
-      qs.forEach((doc) => {
-        const d = doc.data();
-        rows.push(
-          `<div class="lbRow"><span>#${i} ${escapeHtml((d.name||"NONAME").slice(0,6))}</span><span class="mono">${d.score||0}</span></div>`
-        );
-        i++;
+      qs.forEach((doc) => rows.push(doc.data()));
+
+      rows.sort((a, b) => {
+        const byScore = (Number(b.score) || 0) - (Number(a.score) || 0);
+        if (byScore !== 0) return byScore;
+        const at = (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0);
+        return at;
       });
-  
-      list.innerHTML = rows.join("");
+
+      renderServerRows(rows.slice(0, 10));
+    }, (err) => {
+      console.error("[Firebase] 리더보드 구독 실패", err);
+      list.innerHTML = `<div class="lbRow"><span>리더보드 불러오기 실패</span><span>규칙/인덱스 확인</span></div>`;
     });
   }
 
-  
   // Coupon modal (persistent)
   function showCouponModal(code, timeText) {
     $("couponCode").textContent = code;
@@ -934,35 +948,48 @@
 
   $("btnSubmit").addEventListener("click", async () => {
     const name = ($("nickname").value || "").trim().slice(0, 6);
-    if (!name) return;
-  
+    if (!name) {
+      alert("닉네임을 입력해주세요. (최대 6자)");
+      return;
+    }
+
+    if (!firebaseReady || !db) {
+      alert("서버 연결이 준비되지 않았어요. Firebase 설정을 확인해주세요.");
+      return;
+    }
+
     const score = state.score | 0;
     const bucketId = currentBucketId();
     const clientId = getClientId();
-  
-    // 점수 저장 (데이터는 계속 누적)
-    await addDoc(collection(db, "scores"), {
-      name,
-      score,
-      bucketId,
-      clientId,
-      createdAt: serverTimestamp()
-    });
-  
-    // 🔹 현재 버킷에서 나보다 높은 점수 개수 계산
-    const higherQ = query(
-      collection(db, "scores"),
-      where("bucketId", "==", bucketId),
-      where("score", ">", score)
-    );
-  
-    const snap = await getCountFromServer(higherQ);
-    const rank = snap.data().count + 1;
-  
-    alert(`등록 완료! 현재 ${rank}등 입니다.`);
+
+    try {
+      await addDoc(collection(db, "scores"), {
+        name,
+        score,
+        bucketId,
+        clientId,
+        createdAt: serverTimestamp()
+      });
+
+      const bucketSnap = await getDocs(
+        query(collection(db, "scores"), where("bucketId", "==", bucketId))
+      );
+
+      const allScores = [];
+      bucketSnap.forEach((doc) => allScores.push(doc.data()));
+      allScores.sort((a, b) => (Number(b.score) || 0) - (Number(a.score) || 0));
+
+      const higherCount = allScores.filter((row) => (Number(row.score) || 0) > score).length;
+      const rank = higherCount + 1;
+
+      alert(`등록 완료! 현재 ${rank}등 입니다.`);
+    } catch (err) {
+      console.error("[Firebase] 점수 등록 실패", err);
+      alert("점수 등록에 실패했어요. 네트워크/규칙 설정을 확인해주세요.");
+    }
   });
 
-    function getClientId() {
+  function getClientId() {
     let id = localStorage.getItem("tapemongo_clientId");
     if (!id) {
       id = crypto.randomUUID ? crypto.randomUUID() : String(Math.random()).slice(2);
