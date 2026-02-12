@@ -252,10 +252,10 @@ import {
   let irregularSpeedMul = 1;
 
   function comboSpeedMultiplier(combo) {
-    // combo 0: 1.0x, combo 1: 1.25x, combo 2+: 1.25x + 점진 증가
+    // combo 0: 1.0x, combo 1: 1.25x, combo 2+: 1.40x (cap)
     if (combo <= 0) return 1.0;
-    return 1.0 + 0.25 + Math.min(1.0, (combo - 1) * 0.15);
-    // combo 1: 1.25, combo 2: 1.40, combo 3: 1.55, ... combo 8+: 2.25 (cap)
+    if (combo === 1) return 1.25;
+    return 1.40; // combo 2+ 에서 고정 (더 이상 난이도 증가 없음)
   }
 
   // Combo visual styling
@@ -339,7 +339,7 @@ import {
       return;
     }
     list.innerHTML = lb.map((e,i)=>{
-      const name = (e.name||"NONAME").slice(0,6);
+      const name = (e.name||"NONAME").slice(0,15);
       const sc = e.score||0;
       return `<div class="lbRow"><span>#${i+1} ${escapeHtml(name)}</span><span class="mono">${sc}</span></div>`;
     }).join("");
@@ -352,9 +352,10 @@ import {
     }
 
     list.innerHTML = rows.map((d, idx) => {
-      const safeName = escapeHtml((d.name || "NONAME").slice(0, 6));
+      const safeName = escapeHtml((d.name || "NONAME").slice(0, 15));
       const score = Number(d.score) || 0;
-      return `<div class="lbRow"><span>#${idx + 1} ${safeName}</span><span class="mono">${score}</span></div>`;
+      const monsters = Number(d.monsters) || 0;
+      return `<div class="lbRow"><span>#${idx + 1} ${safeName}</span><span class="mono">${monsters}마리 / ${score}점</span></div>`;
     }).join("");
   }
 
@@ -373,6 +374,9 @@ import {
       qs.forEach((doc) => rows.push(doc.data()));
 
       rows.sort((a, b) => {
+        // 몬스터 수 우선, 같으면 점수 높은 순
+        const byMonsters = (Number(b.monsters) || 0) - (Number(a.monsters) || 0);
+        if (byMonsters !== 0) return byMonsters;
         const byScore = (Number(b.score) || 0) - (Number(a.score) || 0);
         if (byScore !== 0) return byScore;
         const at = (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0);
@@ -412,6 +416,9 @@ import {
     const mm = String(now.getMinutes()).padStart(2,"0");
     return `${y}-${mo}-${d} ${hh}:${mm}`;
   }
+  // 축하 연출 상태
+  const celebration = { active: false, until: 0 };
+
   function maybeCatchTarget() {
     if (state.combo < CATCH_COMBO_THRESHOLD) return;
     if (state.combo % CATCH_COMBO_THRESHOLD !== 0) return;
@@ -419,9 +426,26 @@ import {
     const name = currentTargetDef.name;
     state.caughtSet.add(name);
 
-    // 포획 메시지 표시
-    catchMsg.text = `${name}을(를) 잡았다!`;
-    catchMsg.until = performance.now() + 2000;
+    // 모두 잡았는지 체크
+    if (state.caughtSet.size >= TARGET_DEFS.length) {
+      catchMsg.text = "몬스터를 모두 잡았다!";
+      catchMsg.until = performance.now() + 4000;
+      celebration.active = true;
+      celebration.until = performance.now() + 4000;
+      // 대량 파티클 발사
+      for (let i = 0; i < 5; i++) {
+        const cx = world.w * (0.2 + Math.random() * 0.6);
+        const cy = world.h * (0.2 + Math.random() * 0.4);
+        spawnComboParticles(cx, cy, 10);
+      }
+      beep(1500, 0.12, 0.1);
+      setTimeout(() => beep(1800, 0.12, 0.1), 150);
+      setTimeout(() => beep(2200, 0.15, 0.1), 300);
+    } else {
+      // 포획 메시지 표시
+      catchMsg.text = `${name}을(를) 잡았다!`;
+      catchMsg.until = performance.now() + 2000;
+    }
 
     // 다른 타겟으로 교체
     const newDef = pickRandomTarget(currentTargetDef.src);
@@ -432,7 +456,7 @@ import {
 
   function syncCatchUI() {
     const el = $("catchCount");
-    if (el) el.textContent = `${state.caughtSet.size}/${TARGET_DEFS.length}`;
+    if (el) el.textContent = `수집 ${state.caughtSet.size}/${TARGET_DEFS.length}`;
   }
 
   function maybeShowCouponOnCombo3() {
@@ -509,20 +533,20 @@ import {
     const comboMul = comboSpeedMultiplier(state.combo);
     let speed = baseSpeed * comboMul;
 
-    // combo 2+: 불규칙적 속도 변화
+    // combo 2+: 불규칙적 속도 변화 + 갑작스러운 방향 전환
     if (state.combo >= 2) {
       irregularTimer += dt;
       // 주기적으로 속도 배율 변경 (0.5~1.8초 간격)
       const interval = Math.max(0.5, 1.8 - state.combo * 0.12);
       if (irregularTimer >= interval) {
         irregularTimer = 0;
-        // 0.4 ~ 1.8 사이의 랜덤 속도 배율
-        irregularSpeedMul = 0.4 + Math.random() * 1.4;
+        // 0.8 ~ 1.8 사이의 랜덤 속도 배율
+        irregularSpeedMul = 0.8 + Math.random() * 1.0;
       }
       speed *= irregularSpeedMul;
 
-      // combo 4+: 가끔 갑자기 방향 전환
-      if (state.combo >= 4 && Math.random() < 0.008 * state.combo) {
+      // combo 2+: 가끔 갑자기 방향 전환
+      if (Math.random() < 0.012) {
         target.dir *= -1;
       }
     } else {
@@ -931,13 +955,27 @@ import {
       ctx.fillText(`야생의 ${currentTargetDef.name}이(가) 나타났다! · ${BUILD_VERSION}`, 18, 28);
     }
 
+    // 축하 연출 배경
+    if (celebration.active && performance.now() < celebration.until) {
+      const remain = clamp((celebration.until - performance.now()) / 4000, 0, 1);
+      ctx.save();
+      ctx.globalAlpha = remain * 0.25;
+      ctx.fillStyle = "rgba(255,215,0,1)";
+      ctx.fillRect(0, 0, world.w, world.h);
+      ctx.restore();
+    } else if (celebration.active) {
+      celebration.active = false;
+    }
+
     // 포획 메시지
     if (catchMsg.text && performance.now() < catchMsg.until) {
-      const remain = clamp((catchMsg.until - performance.now()) / 2000, 0, 1);
+      const duration = celebration.active ? 4000 : 2000;
+      const remain = clamp((catchMsg.until - performance.now()) / duration, 0, 1);
       ctx.save();
       ctx.globalAlpha = 0.4 + remain * 0.6;
       ctx.fillStyle = "rgba(255,215,0,0.98)";
-      ctx.font = `bold 22px ui-sans-serif, system-ui, -apple-system, Apple SD Gothic Neo, Noto Sans KR, sans-serif`;
+      const fontSize = celebration.active ? 28 : 22;
+      ctx.font = `bold ${fontSize}px ui-sans-serif, system-ui, -apple-system, Apple SD Gothic Neo, Noto Sans KR, sans-serif`;
       ctx.textAlign = "center";
       ctx.fillText(catchMsg.text, world.w * 0.5, world.h * 0.45);
       ctx.textAlign = "start";
@@ -1062,9 +1100,9 @@ import {
   });
 
   $("btnSubmit").addEventListener("click", async () => {
-    const name = ($("nickname").value || "").trim().slice(0, 6);
+    const name = ($("nickname").value || "").trim().slice(0, 15);
     if (!name) {
-      alert("닉네임을 입력해주세요. (최대 6자)");
+      alert("인스타그램 ID를 입력해주세요.");
       return;
     }
 
@@ -1078,9 +1116,11 @@ import {
     const clientId = getClientId();
 
     try {
+      const monsters = state.caughtSet.size;
       await addDoc(collection(db, "scores"), {
         name,
         score,
+        monsters,
         bucketId,
         clientId,
         createdAt: serverTimestamp()
@@ -1092,9 +1132,17 @@ import {
 
       const allScores = [];
       bucketSnap.forEach((doc) => allScores.push(doc.data()));
-      allScores.sort((a, b) => (Number(b.score) || 0) - (Number(a.score) || 0));
+      allScores.sort((a, b) => {
+        const byMonsters = (Number(b.monsters) || 0) - (Number(a.monsters) || 0);
+        if (byMonsters !== 0) return byMonsters;
+        return (Number(b.score) || 0) - (Number(a.score) || 0);
+      });
 
-      const higherCount = allScores.filter((row) => (Number(row.score) || 0) > score).length;
+      const higherCount = allScores.filter((row) => {
+        const rm = Number(row.monsters) || 0;
+        const rs = Number(row.score) || 0;
+        return rm > monsters || (rm === monsters && rs > score);
+      }).length;
       const rank = higherCount + 1;
 
       alert(`등록 완료! 현재 ${rank}등 입니다.`);
