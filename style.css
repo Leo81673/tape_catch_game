@@ -71,7 +71,7 @@ body{
   justify-content:center;
 }
 .game-logo{
-  width:min(100%, 420px);
+  width:min(100%, 294px);
   height:auto;
   display:block;
 }
@@ -215,4 +215,3 @@ body{
 }
 .modal-time{margin-top:8px;color:rgba(234,240,255,0.75);text-align:center}
 .modal-actions{margin-top:14px;display:flex;justify-content:center}
-
