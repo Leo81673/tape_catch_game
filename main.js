@@ -18,18 +18,18 @@ import {
   const BUILD_VERSION = "5콤보시 쿠폰 증정!"; // 배포 확인용 버전(코드 수정 시 올리기)
   const COMBO_DIFFICULTY_SETTINGS = {
     combo2Plus: { suddenTurnChance: 0.012, hitRadius: 18 },
-    combo3Plus: { suddenTurnChance: 0.012, hitRadius: 17 },
-    combo4Plus: { suddenTurnChance: 0.012, hitRadius: 16 },
-    combo5Plus: { suddenTurnChance: 0.012, hitRadius: 15 },
+    combo3Plus: { suddenTurnChance: 0.012, hitRadius: 16 },
+    combo4Plus: { suddenTurnChance: 0.012, hitRadius: 14 },
+    combo5Plus: { suddenTurnChance: 0.012, hitRadius: 12 },
   };
 
   // ===== 타겟(몬스터) 정의 =====
   const TARGET_DEFS = [
-    { src: "target.png",  name: "피카츄",   weight: 32 },
-    { src: "target2.png", name: "파이리",   weight: 32 },
-    { src: "target3.png", name: "이상해씨",   weight: 32 },
-    { src: "target4.png", name: "뮤츠", weight: 3  },
-    { src: "target5.png", name: "뮤", weight: 1  },
+    { src: "target.png",  name: "피카츄",   weight: 31 },
+    { src: "target2.png", name: "파이리",   weight: 31 },
+    { src: "target3.png", name: "이상해씨",   weight: 30 },
+    { src: "target4.png", name: "뮤츠", weight: 5  },
+    { src: "target5.png", name: "뮤", weight: 3  },
   ];
   const CATCH_COMBO_THRESHOLD = 3; // 이 콤보 달성 시 타겟 포획
   // =============================
