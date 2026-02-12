@@ -1,0 +1,27 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // scores 컬렉션: 누구나 읽기/쓰기 가능 (공개 게임용)
+    match /scores/{scoreId} {
+      allow read: if true;
+
+      allow create: if
+        request.resource.data.keys().hasAll([
+          'name', 'score', 'monsters', 'maxCombo',
+          'bucketId', 'clientId', 'createdAt'
+        ])
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.name.size() <= 15
+        && request.resource.data.score is int
+        && request.resource.data.monsters is int
+        && request.resource.data.maxCombo is int
+        && request.resource.data.bucketId is int
+        && request.resource.data.clientId is string;
+
+      // 수정/삭제는 불가
+      allow update, delete: if false;
+    }
+  }
+}
