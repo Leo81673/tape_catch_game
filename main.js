@@ -13,7 +13,7 @@ import {
   const COUPON_COOLDOWN_MS = 2 * 60 * 60 * 1000; // 2시간
   const TARGET_HIT_RADIUS = 18;      // ✅ 히트박스 반경(px). PNG 크기와 분리(추천)
   const USE_TARGET_IMAGE = true;     // PNG 사용할지 여부
-  const BUILD_VERSION = "3콤보시 1샷 증정!_2"; // 배포 확인용 버전(코드 수정 시 올리기)
+  const BUILD_VERSION = "3콤보시 1샷 증정!_33"; // 배포 확인용 버전(코드 수정 시 올리기)
 
   // ===== 타겟(몬스터) 정의 =====
   const TARGET_DEFS = [
