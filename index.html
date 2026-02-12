@@ -47,16 +47,14 @@
         </details>
 
         <details class="details">
-          <summary>리더보드(현재: 이 기기 내 저장)</summary>
+          <summary>리더보드(서버 TOP 10 · 48시간마다 리셋)</summary>
           <div class="lb">
             <div class="panel-row">
               <input id="nickname" class="input" maxlength="6" placeholder="닉네임(최대 6자)" />
               <button id="btnSubmit" class="btn">점수 등록</button>
             </div>
             <div id="lbList" class="lbList"></div>
-            <div class="note">
-              ※ 다음 단계에서 “서버 리더보드(모든 접속자 공유 TOP10)”로 바꿔드릴 수 있습니다.
-            </div>
+            <div class="note">※ 점수는 서버에 누적 저장되며, 화면에는 현재 48시간 버킷 TOP 10만 표시됩니다.</div>
           </div>
         </details>
       </section>
@@ -79,29 +77,7 @@
   </div>
 
 
-    <script type="module">
-    // Import the functions you need from the SDKs you need
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js";
-    import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-analytics.js";
-    // TODO: Add SDKs for Firebase products that you want to use
-    // https://firebase.google.com/docs/web/setup#available-libraries
-  
-    // Your web app's Firebase configuration
-    // For Firebase JS SDK v7.20.0 and later, measurementId is optional
-    const firebaseConfig = {
-      apiKey: "AIzaSyDwXIjBRO-S8MLXS_mScveA845pUKY9fCA",
-      authDomain: "tape-seoul-catch.firebaseapp.com",
-      projectId: "tape-seoul-catch",
-      storageBucket: "tape-seoul-catch.firebasestorage.app",
-      messagingSenderId: "985851999683",
-      appId: "1:985851999683:web:a0634a1a7641d5c2f5b976",
-      measurementId: "G-ZSH3PSRRB3"
-    };
-  
-    // Initialize Firebase
-    const app = initializeApp(firebaseConfig);
-    const analytics = getAnalytics(app);
-  </script>
+    
   
   <script type="module" src="main.js"></script>
 
