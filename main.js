@@ -11,11 +11,17 @@ import {
   const DEFAULT_DIFFICULTY = 5;      // 1~5  (타겟 이동 속도)
   const DEFAULT_SENSITIVITY = 2;   // 내부 계산용(현재 고정)
   const COUPON_COOLDOWN_MS = 2 * 60 * 60 * 1000; // 2시간
-  const TARGET_HIT_RADIUS = 18;      // ✅ 히트박스 반경(px). PNG 크기와 분리(추천)
+  const BASE_TARGET_HIT_RADIUS = 18; // 기본 히트박스 반경(px)
   const IRREGULAR_SPEED_MIN = 0.6;   // 불규칙 속도 최소 배율
   const IRREGULAR_SPEED_MAX = 1.1;   // 불규칙 속도 최대 배율
   const USE_TARGET_IMAGE = true;     // PNG 사용할지 여부
   const BUILD_VERSION = "5콤보시 쿠폰 증정!_1909"; // 배포 확인용 버전(코드 수정 시 올리기)
+  const COMBO_DIFFICULTY_SETTINGS = {
+    combo2Plus: { suddenTurnChance: 0.012, hitRadius: 18 },
+    combo3Plus: { suddenTurnChance: 0.017, hitRadius: 17 },
+    combo4Plus: { suddenTurnChance: 0.022, hitRadius: 16 },
+    combo5Plus: { suddenTurnChance: 0.028, hitRadius: 15 },
+  };
 
   // ===== 타겟(몬스터) 정의 =====
   const TARGET_DEFS = [
@@ -131,8 +137,6 @@ import {
   const state = {
     running: false,
 
-    // option (only)
-    optMotionThrow: false,
 
     score: 0,
     combo: 0,
@@ -150,9 +154,6 @@ import {
     // throw cooldown
     lastThrowAt: 0,
 
-    // motion
-    lastAccelZ: 0,
-    motionArmed: false,
 
     // coupon
     lastCouponAt: 0,
@@ -172,7 +173,7 @@ import {
     y: 0,
     dir: 1,
     vx: 0,
-    hitR: TARGET_HIT_RADIUS,
+    hitR: BASE_TARGET_HIT_RADIUS,
     prevX: 0,
 
     // image draw size (보이는 크기) - PNG 크기와 무관하게 여기서 스케일 조절 가능
@@ -259,6 +260,14 @@ import {
     if (combo <= 0) return 1.0;
     if (combo === 1) return 1.25;
     return 1.40; // combo 2+ 에서 고정 (더 이상 난이도 증가 없음)
+  }
+
+  function comboTierSettings(combo) {
+    if (combo >= 5) return COMBO_DIFFICULTY_SETTINGS.combo5Plus;
+    if (combo >= 4) return COMBO_DIFFICULTY_SETTINGS.combo4Plus;
+    if (combo >= 3) return COMBO_DIFFICULTY_SETTINGS.combo3Plus;
+    if (combo >= 2) return COMBO_DIFFICULTY_SETTINGS.combo2Plus;
+    return { suddenTurnChance: 0, hitRadius: BASE_TARGET_HIT_RADIUS };
   }
 
   // Combo visual styling
@@ -490,43 +499,6 @@ import {
     beep(1200, 0.07, 0.08);
   }
 
-  // Motion permission (optional)
-  async function ensureMotionPermissionIfNeeded() {
-    if (!state.optMotionThrow) return true;
-    try {
-      const DME = window.DeviceMotionEvent;
-      if (!DME) return false;
-      if (typeof DME.requestPermission === "function") {
-        const res = await DME.requestPermission();
-        return res === "granted";
-      }
-      return true;
-    } catch (_) {
-      return false;
-    }
-  }
-
-  function onDeviceMotion(e) {
-    if (!state.running || !state.optMotionThrow) return;
-    const acc = e.accelerationIncludingGravity;
-    if (!acc) return;
-
-    const z = acc.z || 0;
-    const dz = z - state.lastAccelZ;
-    state.lastAccelZ = z;
-
-    // hold 중이면 "던질 준비"
-    if (state.holding && state.chargePower > 0.15) state.motionArmed = true;
-
-    const thresh = 6.0 * state.sensitivity;
-    if (state.motionArmed && dz < -thresh) {
-      // 모션 던지기: 중앙으로 던짐
-      launchBall(state.chargePower, world.w * 0.5);
-      endHold();
-      state.motionArmed = false;
-    }
-  }
-
   // Gameplay
   function startGame() {
     state.running = true;
@@ -545,6 +517,9 @@ import {
     const comboMul = comboSpeedMultiplier(state.combo);
     let speed = baseSpeed * comboMul;
 
+    const tier = comboTierSettings(state.combo);
+    target.hitR = tier.hitRadius;
+
     // combo 2+: 불규칙적 속도 변화 + 갑작스러운 방향 전환
     if (state.combo >= 2) {
       irregularTimer += dt;
@@ -557,8 +532,7 @@ import {
       }
       speed *= irregularSpeedMul;
 
-      // combo 2+: 가끔 갑자기 방향 전환
-      if (Math.random() < 0.012) {
+      if (Math.random() < tier.suddenTurnChance) {
         target.dir *= -1;
       }
     } else {
@@ -742,8 +716,6 @@ import {
     state.holding = true;
     state.holdStartAt = performance.now();
     state.chargePower = 0;
-    state.motionArmed = false;
-
     // 누르고 있는 동안 "조준" 위치를 갱신하려면 여기서 저장해도 됨(현재는 release 시 위치 사용)
   }
 
@@ -761,7 +733,6 @@ import {
     state.holding = false;
     state.holdStartAt = 0;
     state.chargePower = 0;
-    state.motionArmed = false;
   }
 
   // Input (tap hold / release)
@@ -865,6 +836,31 @@ import {
     ctx.save();
     ctx.translate(target.x, target.y);
 
+    const rareLevel = currentTargetDef.src === "target5.png" ? 2 : (currentTargetDef.src === "target4.png" ? 1 : 0);
+    const t = performance.now() * 0.001;
+
+    if (rareLevel >= 1) {
+      const pulse = 0.55 + 0.45 * Math.sin(t * (rareLevel === 2 ? 7.0 : 5.0));
+      const auraR = target.hitR * (2.2 + pulse * (rareLevel === 2 ? 0.9 : 0.5));
+      const auraColor = rareLevel === 2 ? "rgba(255,120,230,0.28)" : "rgba(255,215,0,0.24)";
+      ctx.beginPath();
+      ctx.fillStyle = auraColor;
+      ctx.arc(0, 0, auraR, 0, Math.PI * 2);
+      ctx.fill();
+
+      const ringCount = rareLevel === 2 ? 3 : 2;
+      for (let i = 0; i < ringCount; i++) {
+        const phase = (t * (rareLevel === 2 ? 1.8 : 1.2) + i / ringCount) % 1;
+        const rr = target.hitR * (1.8 + phase * (rareLevel === 2 ? 2.6 : 1.7));
+        const alpha = (1 - phase) * (rareLevel === 2 ? 0.55 : 0.38);
+        ctx.beginPath();
+        ctx.strokeStyle = rareLevel === 2 ? `rgba(255,165,240,${alpha})` : `rgba(255,232,120,${alpha})`;
+        ctx.lineWidth = rareLevel === 2 ? 3 : 2;
+        ctx.arc(0, 0, rr, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+    }
+
     // glow
     ctx.beginPath();
     ctx.fillStyle = "rgba(110,231,255,0.18)";
@@ -960,12 +956,6 @@ import {
     ctx.save();
     ctx.fillStyle = "rgba(234,240,255,0.78)";
     ctx.font = "14px ui-sans-serif, system-ui, -apple-system, Apple SD Gothic Neo, Noto Sans KR, sans-serif";
-
-    if (!state.running) {
-      ctx.fillText("플레이 시작을 누르세요", 18, 28);
-      ctx.restore();
-      return;
-    }
 
     if (state.holding) {
       ctx.fillText(`CHARGE ${Math.round(state.chargePower * 100)}%`, 18, 28);
@@ -1099,23 +1089,6 @@ import {
     if (e.target === cv) e.preventDefault();
   }, { passive: false });
 
-
-  window.addEventListener("devicemotion", onDeviceMotion, { passive: true });
-
-  $("btnStart").addEventListener("click", async () => {
-    beep(660, 0.03, 0.03); // audio unlock
-    const ok = await ensureMotionPermissionIfNeeded();
-    if (state.optMotionThrow && !ok) {
-      // 모션 권한 거부여도 게임은 정상 진행
-      beep(220, 0.06, 0.05);
-    }
-    startGame();
-  });
-
-  $("optMotionThrow").addEventListener("change", (e) => {
-    state.optMotionThrow = e.target.checked;
-  });
-
   $("btnCloseCoupon").addEventListener("click", () => {
     hideCouponModal();
   });
@@ -1217,6 +1190,7 @@ import {
     syncUI();
     syncCatchUI();
     listenTop10();   // 🔥 서버 리더보드
+    startGame();
     requestAnimationFrame(tick);
   }
 
