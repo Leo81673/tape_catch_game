@@ -21,7 +21,7 @@
         <div class="pill">Score: <span id="score">0</span></div>
         <div id="comboPill" class="pill">Combo: <span id="combo">0</span></div>
         <div class="pill">Best: <span id="best">0</span></div>
-        <div class="pill catch-pill">🎯 <span id="catchCount">0/5</span></div>
+        <div class="pill catch-pill"><span id="catchCount">수집 0/5</span></div>
       </div>
     </header>
 
@@ -47,17 +47,17 @@
           </div>
         </details>
 
-        <details class="details">
-          <summary>리더보드(서버 TOP 10 · 48시간마다 리셋)</summary>
+        <div class="details">
+          <div class="lb-title">TOP 10 USER</div>
           <div class="lb">
             <div class="panel-row">
-              <input id="nickname" class="input" maxlength="6" placeholder="닉네임(최대 6자)" />
+              <input id="nickname" class="input" maxlength="15" placeholder="인스타그램 ID" />
               <button id="btnSubmit" class="btn">점수 등록</button>
             </div>
             <div id="lbList" class="lbList"></div>
-            <div class="note">※ 점수는 서버에 누적 저장되며, 화면에는 현재 48시간 버킷 TOP 10만 표시됩니다.</div>
+            <div class="note">※ 1위에게는 바틀이용권 증정!</div>
           </div>
-        </details>
+        </div>
       </section>
     </main>
   </div>

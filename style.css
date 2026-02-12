@@ -37,7 +37,7 @@ body{
 }
 .title{font-weight:800;letter-spacing:0.5px}
 .sub{font-size:12px;color:var(--muted)}
-.status{display:flex;gap:8px;flex-wrap:nowrap;flex-shrink:0;justify-content:flex-end}
+.status{display:flex;gap:8px;flex-wrap:wrap;flex-shrink:1;justify-content:flex-end}
 .pill{
   padding:8px 10px;border-radius:999px;
   border:1px solid var(--border);
@@ -62,6 +62,7 @@ body{
 .combo-3{background:rgba(255,215,0,0.25);border-color:rgba(255,215,0,0.55);color:#ffd700;font-weight:700}
 .combo-max{background:linear-gradient(135deg,rgba(255,100,100,0.30),rgba(255,215,0,0.30),rgba(110,255,168,0.30),rgba(110,200,255,0.30));border-color:rgba(255,215,0,0.60);color:#fff;font-weight:700;text-shadow:0 0 8px rgba(255,215,0,0.6)}
 .catch-pill{background:rgba(255,180,60,0.15);border-color:rgba(255,180,60,0.40);color:#ffb43c}
+.lb-title{font-weight:900;font-size:15px;margin-bottom:8px}
 
 .main{margin-top:12px}
 #cv{
