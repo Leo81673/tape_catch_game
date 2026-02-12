@@ -8,7 +8,7 @@
   const TARGET_HIT_RADIUS = 18;      // ✅ 히트박스 반경(px). PNG 크기와 분리(추천)
   const TARGET_IMG_SRC = "target.png"; // ✅ PNG 쓰려면 같은 폴더에 target.png 업로드
   const USE_TARGET_IMAGE = true;     // PNG 사용할지 여부
-  const BUILD_VERSION = "3콤보시 1샷 증정!_4"; // 배포 확인용 버전(코드 수정 시 올리기)
+  const BUILD_VERSION = "3콤보시 1샷 증정!_5"; // 배포 확인용 버전(코드 수정 시 올리기)
   // =============================
 
   const $ = (id) => document.getElementById(id);
@@ -114,9 +114,68 @@
     scale: 1,
   };
 
+  // Combo hit particles
+  const particles = [];
+  function spawnComboParticles(x, y, combo) {
+    const count = Math.min(12, 4 + combo * 2);
+    const colors = [
+      "rgba(168,255,110,0.9)", "rgba(110,231,255,0.9)",
+      "rgba(255,215,0,0.9)", "rgba(200,160,255,0.9)",
+    ];
+    for (let i = 0; i < count; i++) {
+      const angle = (Math.PI * 2 * i) / count + (Math.random() - 0.5) * 0.5;
+      const speed = 80 + Math.random() * 120 + combo * 15;
+      particles.push({
+        x, y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        life: 0.5 + Math.random() * 0.3,
+        maxLife: 0.5 + Math.random() * 0.3,
+        r: 2 + Math.random() * 3,
+        color: colors[i % colors.length],
+      });
+    }
+  }
+  function updateParticles(dt) {
+    for (let i = particles.length - 1; i >= 0; i--) {
+      const p = particles[i];
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.vy += 200 * dt; // light gravity
+      p.life -= dt;
+      if (p.life <= 0) particles.splice(i, 1);
+    }
+  }
+  function drawParticles() {
+    for (const p of particles) {
+      const alpha = clamp(p.life / p.maxLife, 0, 1);
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r * alpha, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+
+  // Screen shake
+  let shakeUntil = 0;
+  let shakeIntensity = 0;
+
   function difficultySpeed(diff) {
     // 1..5
     return 220 + (diff - 1) * 90;
+  }
+
+  // Combo visual styling
+  let prevComboForAnim = 0;
+  function comboClass(c) {
+    if (c <= 0) return "";
+    if (c === 1) return "combo-1";
+    if (c === 2) return "combo-2";
+    if (c === 3) return "combo-3";
+    return "combo-max";
   }
 
   // UI sync
@@ -124,6 +183,21 @@
     $("score").textContent = String(state.score);
     $("combo").textContent = String(state.combo);
     $("best").textContent = String(state.best);
+
+    // Combo pill styling
+    const pill = $("comboPill");
+    pill.className = "pill";
+    const cls = comboClass(state.combo);
+    if (cls) pill.classList.add(cls);
+
+    // Pop animation on combo increase
+    if (state.combo > prevComboForAnim) {
+      pill.classList.remove("combo-pop");
+      // Force reflow to restart animation
+      void pill.offsetWidth;
+      pill.classList.add("combo-pop");
+    }
+    prevComboForAnim = state.combo;
   }
 
   function loadLocal() {
@@ -299,8 +373,13 @@
     const maxDx = world.w * 0.45;
     const nx = clamp(dx / maxDx, -1, 1);
 
-    ball.vx = nx * (420 * p);
-    ball.vy = -(760 * (0.50 + 0.60 * p));
+    // Scale velocity based on screen height so the ball can always reach the target
+    // Reference height ~400px (iPhone 15 canvas). On taller screens, scale up.
+    const refH = 400;
+    const hScale = Math.sqrt(Math.max(1, world.h / refH));
+
+    ball.vx = nx * (420 * hScale * p);
+    ball.vy = -(760 * hScale * (0.50 + 0.60 * p));
     ball.bestDist = Infinity;
 
     beep(880 + 280 * p, 0.05, 0.06);
@@ -330,14 +409,31 @@
 
   function showJudgeFeedback(label) {
     const now = performance.now();
+
+    // Dynamic colors based on combo level
+    let perfectColor = "rgba(168,255,110,0.98)";
+    if (state.combo >= 4) perfectColor = "rgba(255,215,0,0.98)";
+    else if (state.combo >= 3) perfectColor = "rgba(255,215,0,0.98)";
+    else if (state.combo >= 2) perfectColor = "rgba(200,160,255,0.98)";
+
+    let niceColor = "rgba(110,231,255,0.98)";
+    if (state.combo >= 3) niceColor = "rgba(255,215,0,0.90)";
+    else if (state.combo >= 2) niceColor = "rgba(200,160,255,0.90)";
+
     const styleByLabel = {
-      "PERFECT": { color: "rgba(168,255,110,0.98)", scale: 1.1 },
-      "NICE": { color: "rgba(110,231,255,0.98)", scale: 1.0 },
+      "PERFECT": { color: perfectColor, scale: 1.1 + Math.min(0.3, state.combo * 0.05) },
+      "NICE": { color: niceColor, scale: 1.0 + Math.min(0.2, state.combo * 0.04) },
       "MISS😣": { color: "rgba(255,166,166,0.98)", scale: 0.95 },
     };
     const style = styleByLabel[label] || { color: "rgba(234,240,255,0.98)", scale: 1.0 };
 
-    feedback.text = label;
+    // Include combo count in feedback for combos >= 2
+    let displayText = label;
+    if (!label.startsWith("MISS") && state.combo >= 2) {
+      displayText = `${label} x${state.combo}`;
+    }
+
+    feedback.text = displayText;
     feedback.color = style.color;
     feedback.scale = style.scale;
     feedback.until = now + 820;
@@ -371,6 +467,13 @@
 
     state.score += gained;
     if (state.score > state.best) { state.best = state.score; saveBest(); }
+
+    // Combo visual effects
+    if (state.combo >= 2) {
+      spawnComboParticles(target.x, target.y, state.combo);
+      shakeIntensity = Math.min(4, 1 + state.combo * 0.5);
+      shakeUntil = performance.now() + 200;
+    }
 
     if (label === "PERFECT") beep(1200, 0.06, 0.08);
     else beep(820, 0.06, 0.06);
@@ -554,12 +657,28 @@
       ctx.fill();
     }
 
-    // 히트박스 시각화 (육안 판정 기준)
+    // 히트박스 시각화 (육안 판정 기준) - combo에 따라 색상 변경
     ctx.beginPath();
-    ctx.strokeStyle = "rgba(110,231,255,0.85)";
+    let hitColor = "rgba(110,231,255,0.85)";
+    if (state.combo >= 4) hitColor = "rgba(255,215,0,0.90)";
+    else if (state.combo >= 3) hitColor = "rgba(255,215,0,0.85)";
+    else if (state.combo >= 2) hitColor = "rgba(200,160,255,0.85)";
+    else if (state.combo >= 1) hitColor = "rgba(110,231,255,0.85)";
+    ctx.strokeStyle = hitColor;
     ctx.lineWidth = 2;
     ctx.arc(0, 0, target.hitR, 0, Math.PI * 2);
     ctx.stroke();
+
+    // Combo glow ring
+    if (state.combo >= 2) {
+      const pulseT = (performance.now() % 800) / 800;
+      const pulseAlpha = 0.15 + Math.sin(pulseT * Math.PI * 2) * 0.1;
+      ctx.beginPath();
+      ctx.strokeStyle = hitColor.replace(/[\d.]+\)$/, pulseAlpha + ")");
+      ctx.lineWidth = 3;
+      ctx.arc(0, 0, target.hitR * (1.6 + pulseT * 0.3), 0, Math.PI * 2);
+      ctx.stroke();
+    }
 
     ctx.restore();
   }
@@ -649,12 +768,27 @@
       updateHold();
       updateTarget(dt);
       updateBall(dt);
+      updateParticles(dt);
+    }
+
+    // Screen shake
+    const shaking = performance.now() < shakeUntil;
+    if (shaking) {
+      const sx = (Math.random() - 0.5) * shakeIntensity * 2;
+      const sy = (Math.random() - 0.5) * shakeIntensity * 2;
+      ctx.save();
+      ctx.translate(sx, sy);
     }
 
     drawBackground();
     drawTarget();
     drawBall();
+    drawParticles();
     drawHUDText();
+
+    if (shaking) {
+      ctx.restore();
+    }
 
     requestAnimationFrame(tick);
   }
