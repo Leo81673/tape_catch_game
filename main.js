@@ -275,6 +275,7 @@ import {
   function syncUI() {
     $("score").textContent = String(state.score);
     $("combo").textContent = String(state.combo);
+    $("maxCombo").textContent = String(state.maxCombo);
     $("best").textContent = String(state.best);
 
     // Combo pill styling
@@ -394,7 +395,9 @@ import {
       renderServerRows(rows.slice(0, 10));
     }, (err) => {
       console.error("[Firebase] 리더보드 구독 실패", err);
-      list.innerHTML = `<div class="lbRow"><span>리더보드 불러오기 실패</span><span>규칙/인덱스 확인</span></div>`;
+      const code = err?.code || "";
+      const hint = code === "permission-denied" ? "Firestore 규칙 확인" : "네트워크/설정 확인";
+      list.innerHTML = `<div class="lbRow"><span>리더보드 불러오기 실패</span><span>${hint}</span></div>`;
     });
   }
 
@@ -1168,7 +1171,14 @@ import {
       alert(`등록 완료! 현재 ${rank}등 입니다.`);
     } catch (err) {
       console.error("[Firebase] 점수 등록 실패", err);
-      alert("점수 등록에 실패했어요. 네트워크/규칙 설정을 확인해주세요.");
+      const code = err?.code || "";
+      if (code === "permission-denied" || code === "PERMISSION_DENIED") {
+        alert("점수 등록 권한이 없어요. Firestore 보안 규칙을 확인해주세요.\n(firestore.rules 파일 참고)");
+      } else if (code === "unavailable" || code === "deadline-exceeded") {
+        alert("서버에 연결할 수 없어요. 네트워크 상태를 확인해주세요.");
+      } else {
+        alert(`점수 등록에 실패했어요. (${code || err?.message || "알 수 없는 오류"})`);
+      }
     }
   });
 
