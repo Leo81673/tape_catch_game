@@ -12,9 +12,18 @@ import {
   const DEFAULT_SENSITIVITY = 2;   // 내부 계산용(현재 고정)
   const COUPON_COOLDOWN_MS = 2 * 60 * 60 * 1000; // 2시간
   const TARGET_HIT_RADIUS = 18;      // ✅ 히트박스 반경(px). PNG 크기와 분리(추천)
-  const TARGET_IMG_SRC = "target.png"; // ✅ PNG 쓰려면 같은 폴더에 target.png 업로드
   const USE_TARGET_IMAGE = true;     // PNG 사용할지 여부
-  const BUILD_VERSION = "3콤보시 1샷 증정!_12"; // 배포 확인용 버전(코드 수정 시 올리기)
+  const BUILD_VERSION = "3콤보시 1샷 증정!_13"; // 배포 확인용 버전(코드 수정 시 올리기)
+
+  // ===== 타겟(몬스터) 정의 =====
+  const TARGET_DEFS = [
+    { src: "target.png",  name: "피카츄",   weight: 30 },
+    { src: "target2.png", name: "파이리",   weight: 30 },
+    { src: "target3.png", name: "꼬부기",   weight: 30 },
+    { src: "target4.png", name: "특별몬1", weight: 5  },
+    { src: "target5.png", name: "특별몬2", weight: 5  },
+  ];
+  const CATCH_COMBO_THRESHOLD = 3; // 이 콤보 달성 시 타겟 포획
   // =============================
 
   const firebaseConfig = {
@@ -90,12 +99,30 @@ import {
   }
   window.addEventListener("resize", resize);
 
-  // Target image
-  const targetImg = new Image();
-  let targetImgReady = false;
+  // Target images (preload all)
+  const targetImages = {};
+  let currentTargetDef = TARGET_DEFS[0]; // 현재 활성 타겟
   if (USE_TARGET_IMAGE) {
-    targetImg.onload = () => { targetImgReady = true; };
-    targetImg.src = TARGET_IMG_SRC;
+    for (const def of TARGET_DEFS) {
+      const img = new Image();
+      img.onload = () => { img._ready = true; };
+      img.src = def.src;
+      targetImages[def.src] = img;
+    }
+  }
+
+  function pickRandomTarget(excludeSrc) {
+    // 가중치 기반 랜덤 선택 (현재 타겟 제외 가능)
+    const pool = excludeSrc
+      ? TARGET_DEFS.filter(d => d.src !== excludeSrc)
+      : TARGET_DEFS;
+    const totalWeight = pool.reduce((s, d) => s + d.weight, 0);
+    let r = Math.random() * totalWeight;
+    for (const d of pool) {
+      r -= d.weight;
+      if (r <= 0) return d;
+    }
+    return pool[pool.length - 1];
   }
 
   // Game state
@@ -126,6 +153,15 @@ import {
 
     // coupon
     lastCouponAt: 0,
+
+    // catch collection
+    caughtSet: new Set(), // 잡은 타겟 이름들
+  };
+
+  // 포획 메시지
+  const catchMsg = {
+    text: "",
+    until: 0,
   };
 
   const target = {
@@ -209,6 +245,17 @@ import {
   function difficultySpeed(diff) {
     // 1..5
     return 220 + (diff - 1) * 90;
+  }
+
+  // 콤보 기반 속도 보정
+  let irregularTimer = 0;
+  let irregularSpeedMul = 1;
+
+  function comboSpeedMultiplier(combo) {
+    // combo 0: 1.0x, combo 1: 1.25x, combo 2+: 1.25x + 점진 증가
+    if (combo <= 0) return 1.0;
+    return 1.0 + 0.25 + Math.min(1.0, (combo - 1) * 0.15);
+    // combo 1: 1.25, combo 2: 1.40, combo 3: 1.55, ... combo 8+: 2.25 (cap)
   }
 
   // Combo visual styling
@@ -365,6 +412,29 @@ import {
     const mm = String(now.getMinutes()).padStart(2,"0");
     return `${y}-${mo}-${d} ${hh}:${mm}`;
   }
+  function maybeCatchTarget() {
+    if (state.combo < CATCH_COMBO_THRESHOLD) return;
+    if (state.combo % CATCH_COMBO_THRESHOLD !== 0) return;
+
+    const name = currentTargetDef.name;
+    state.caughtSet.add(name);
+
+    // 포획 메시지 표시
+    catchMsg.text = `${name}을(를) 잡았다!`;
+    catchMsg.until = performance.now() + 2000;
+
+    // 다른 타겟으로 교체
+    const newDef = pickRandomTarget(currentTargetDef.src);
+    currentTargetDef = newDef;
+
+    syncCatchUI();
+  }
+
+  function syncCatchUI() {
+    const el = $("catchCount");
+    if (el) el.textContent = `${state.caughtSet.size}/${TARGET_DEFS.length}`;
+  }
+
   function maybeShowCouponOnCombo3() {
     // 3연속 콤보일때만 (3,6,9... 도 “3연속” 달성으로 보고 발급)
     if (state.combo < 3) return;
@@ -434,7 +504,33 @@ import {
 
   function updateTarget(dt) {
     target.prevX = target.x;
-    target.vx = difficultySpeed(state.difficulty);
+
+    const baseSpeed = difficultySpeed(state.difficulty);
+    const comboMul = comboSpeedMultiplier(state.combo);
+    let speed = baseSpeed * comboMul;
+
+    // combo 2+: 불규칙적 속도 변화
+    if (state.combo >= 2) {
+      irregularTimer += dt;
+      // 주기적으로 속도 배율 변경 (0.5~1.8초 간격)
+      const interval = Math.max(0.5, 1.8 - state.combo * 0.12);
+      if (irregularTimer >= interval) {
+        irregularTimer = 0;
+        // 0.4 ~ 1.8 사이의 랜덤 속도 배율
+        irregularSpeedMul = 0.4 + Math.random() * 1.4;
+      }
+      speed *= irregularSpeedMul;
+
+      // combo 4+: 가끔 갑자기 방향 전환
+      if (state.combo >= 4 && Math.random() < 0.008 * state.combo) {
+        target.dir *= -1;
+      }
+    } else {
+      irregularSpeedMul = 1;
+      irregularTimer = 0;
+    }
+
+    target.vx = speed;
     target.x += target.dir * target.vx * dt;
 
     const margin = 24;
@@ -524,7 +620,7 @@ import {
   }
 
   function judgeLabelByDistance(dist) {
-    const perfect = target.hitR * 0.45;
+    const perfect = target.hitR * 0.6;  // ~10.8px (기존 0.45=8.1px → 더 넓은 PERFECT 존)
     const nice = target.hitR;
     const nearMiss = target.hitR * 1.45;
 
@@ -536,16 +632,19 @@ import {
 
   function finishThrowByDistance(dist) {
     const { label, add } = judgeLabelByDistance(dist);
-    showJudgeFeedback(label);
 
     if (label.startsWith("MISS")) {
       state.combo = 0;
+      showJudgeFeedback(label);
       beep(220, 0.08, 0.06);
       syncUI();
       return;
     }
 
+    // 콤보를 먼저 증가시킨 후 피드백 표시 (숫자 일치)
     state.combo += 1;
+    showJudgeFeedback(label);
+
     const comboMul = 1 + Math.min(0.6, state.combo * 0.06);
     const gained = Math.round(add * comboMul);
 
@@ -562,6 +661,8 @@ import {
     if (label === "PERFECT") beep(1200, 0.06, 0.08);
     else beep(820, 0.06, 0.06);
 
+    // 콤보 달성 시 타겟 포획 체크
+    maybeCatchTarget();
     maybeShowCouponOnCombo3();
     syncUI();
   }
@@ -728,11 +829,12 @@ import {
     ctx.arc(0, 0, target.hitR * 1.9, 0, Math.PI * 2);
     ctx.fill();
 
-    if (USE_TARGET_IMAGE && targetImgReady) {
+    const curImg = targetImages[currentTargetDef.src];
+    if (USE_TARGET_IMAGE && curImg && curImg._ready) {
       // 이미지 중심 기준으로 그리기
       const w = target.drawW;
       const h = target.drawH;
-      ctx.drawImage(targetImg, -w/2, -h/2, w, h);
+      ctx.drawImage(curImg, -w/2, -h/2, w, h);
     } else {
       // fallback (원형)
       ctx.beginPath();
@@ -826,7 +928,20 @@ import {
     if (state.holding) {
       ctx.fillText(`CHARGE ${Math.round(state.chargePower * 100)}%`, 18, 28);
     } else {
-      ctx.fillText(`야생의 몬스터가 나타났다! · ${BUILD_VERSION}`, 18, 28);
+      ctx.fillText(`야생의 ${currentTargetDef.name}이(가) 나타났다! · ${BUILD_VERSION}`, 18, 28);
+    }
+
+    // 포획 메시지
+    if (catchMsg.text && performance.now() < catchMsg.until) {
+      const remain = clamp((catchMsg.until - performance.now()) / 2000, 0, 1);
+      ctx.save();
+      ctx.globalAlpha = 0.4 + remain * 0.6;
+      ctx.fillStyle = "rgba(255,215,0,0.98)";
+      ctx.font = `bold 22px ui-sans-serif, system-ui, -apple-system, Apple SD Gothic Neo, Noto Sans KR, sans-serif`;
+      ctx.textAlign = "center";
+      ctx.fillText(catchMsg.text, world.w * 0.5, world.h * 0.45);
+      ctx.textAlign = "start";
+      ctx.restore();
     }
 
     if (feedback.text && performance.now() < feedback.until) {
@@ -1019,6 +1134,7 @@ import {
     resize();
     loadLocal();
     syncUI();
+    syncCatchUI();
     listenTop10();   // 🔥 서버 리더보드
     requestAnimationFrame(tick);
   }
