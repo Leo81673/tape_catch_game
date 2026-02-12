@@ -13,14 +13,14 @@ import {
   const COUPON_COOLDOWN_MS = 2 * 60 * 60 * 1000; // 2시간
   const BASE_TARGET_HIT_RADIUS = 18; // 기본 히트박스 반경(px)
   const IRREGULAR_SPEED_MIN = 0.6;   // 불규칙 속도 최소 배율
-  const IRREGULAR_SPEED_MAX = 1.1;   // 불규칙 속도 최대 배율
+  const IRREGULAR_SPEED_MAX = 1.0;   // 불규칙 속도 최대 배율
   const USE_TARGET_IMAGE = true;     // PNG 사용할지 여부
-  const BUILD_VERSION = "5콤보시 쿠폰 증정!_1909"; // 배포 확인용 버전(코드 수정 시 올리기)
+  const BUILD_VERSION = "5콤보시 쿠폰 증정!"; // 배포 확인용 버전(코드 수정 시 올리기)
   const COMBO_DIFFICULTY_SETTINGS = {
     combo2Plus: { suddenTurnChance: 0.012, hitRadius: 18 },
-    combo3Plus: { suddenTurnChance: 0.017, hitRadius: 17 },
-    combo4Plus: { suddenTurnChance: 0.022, hitRadius: 16 },
-    combo5Plus: { suddenTurnChance: 0.028, hitRadius: 15 },
+    combo3Plus: { suddenTurnChance: 0.012, hitRadius: 17 },
+    combo4Plus: { suddenTurnChance: 0.012, hitRadius: 16 },
+    combo5Plus: { suddenTurnChance: 0.012, hitRadius: 15 },
   };
 
   // ===== 타겟(몬스터) 정의 =====
