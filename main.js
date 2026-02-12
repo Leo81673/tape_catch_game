@@ -104,6 +104,14 @@
     y: 0,
     vx: 0,
     vy: 0,
+    bestDist: Infinity,
+  };
+
+  const feedback = {
+    text: "",
+    color: "rgba(234,240,255,0.95)",
+    until: 0,
+    scale: 1,
   };
 
   function difficultySpeed(diff) {
@@ -293,55 +301,64 @@
 
     ball.vx = nx * (420 * p);
     ball.vy = -(760 * (0.50 + 0.60 * p));
+    ball.bestDist = Infinity;
 
     beep(880 + 280 * p, 0.05, 0.06);
   }
 
-  function updateBall(dt) {
-    if (!ball.active) return;
+  function minDistanceInFrame(prevX, prevY) {
+    const rel0x = prevX - target.prevX;
+    const rel0y = prevY - target.y;
+    const rel1x = ball.x - target.x;
+    const rel1y = ball.y - target.y;
 
-    const prevX = ball.x;
-    const prevY = ball.y;
+    const dRelX = rel1x - rel0x;
+    const dRelY = rel1y - rel0y;
+    const denom = dRelX * dRelX + dRelY * dRelY;
 
-    const g = 1450;
-    ball.vy += g * dt;
-
-    ball.x += ball.vx * dt;
-    ball.y += ball.vy * dt;
-
-    // 판정: 내려오는 구간에서 이전 y -> 현재 y가 target.y 라인을 통과하면 체크
-    const crossedTargetLine = ball.vy > 0 && prevY <= target.y && ball.y >= target.y;
-    if (crossedTargetLine) {
-      const travelY = ball.y - prevY;
-      const t = travelY !== 0 ? clamp((target.y - prevY) / travelY, 0, 1) : 1;
-      const ballXAtCross = prevX + (ball.x - prevX) * t;
-      const targetXAtCross = target.prevX + (target.x - target.prevX) * t;
-      judgeCatch(ballXAtCross, targetXAtCross);
+    let t = 0;
+    if (denom > 0) {
+      t = clamp(-(rel0x * dRelX + rel0y * dRelY) / denom, 0, 1);
     }
 
-    if (ball.y > world.h + 60 || ball.x < -60 || ball.x > world.w + 60) {
-      ball.active = false;
-    }
+    const closestRelX = rel0x + dRelX * t;
+    const closestRelY = rel0y + dRelY * t;
+    const dist = Math.hypot(closestRelX, closestRelY);
+
+    return { dist, t };
   }
 
-  function judgeCatch(ballX = ball.x, targetX = target.x) {
-    if (!ball.active) return;
-    ball.active = false;
+  function showJudgeFeedback(label) {
+    const now = performance.now();
+    const styleByLabel = {
+      "PERFECT": { color: "rgba(168,255,110,0.98)", scale: 1.1 },
+      "NICE": { color: "rgba(110,231,255,0.98)", scale: 1.0 },
+      "MISS😣": { color: "rgba(255,166,166,0.98)", scale: 0.95 },
+    };
+    const style = styleByLabel[label] || { color: "rgba(234,240,255,0.98)", scale: 1.0 };
 
-    const dist = Math.abs(ballX - targetX);
+    feedback.text = label;
+    feedback.color = style.color;
+    feedback.scale = style.scale;
+    feedback.until = now + 820;
+  }
 
-    // 히트박스 기준으로 단계 판정
-    const perfect = target.hitR * 0.35;
-    const great   = target.hitR * 0.70;
-    const nice    = target.hitR * 1.05;
+  function judgeLabelByDistance(dist) {
+    const perfect = target.hitR * 0.45;
+    const nice = target.hitR;
+    const nearMiss = target.hitR * 1.45;
 
-    let add = 0;
-    let label = "MISS";
-    if (dist <= perfect) { label = "PERFECT"; add = 300; }
-    else if (dist <= great) { label = "GREAT"; add = 180; }
-    else if (dist <= nice) { label = "NICE"; add = 100; }
+    if (dist <= perfect) return { label: "PERFECT", add: 300 };
+    if (dist <= nice) return { label: "NICE", add: 120 };
+    if (dist <= nearMiss) return { label: "MISS😣", add: 0 };
+    return { label: "MISS😣", add: 0 };
+  }
 
-    if (label === "MISS") {
+  function finishThrowByDistance(dist) {
+    const { label, add } = judgeLabelByDistance(dist);
+    showJudgeFeedback(label);
+
+    if (label.startsWith("MISS")) {
       state.combo = 0;
       beep(220, 0.08, 0.06);
       syncUI();
@@ -356,13 +373,37 @@
     if (state.score > state.best) { state.best = state.score; saveBest(); }
 
     if (label === "PERFECT") beep(1200, 0.06, 0.08);
-    else if (label === "GREAT") beep(980, 0.06, 0.07);
     else beep(820, 0.06, 0.06);
 
-    // ✅ 3연속 콤보 쿠폰
     maybeShowCouponOnCombo3();
-
     syncUI();
+  }
+
+  function updateBall(dt) {
+    if (!ball.active) return;
+
+    const prevX = ball.x;
+    const prevY = ball.y;
+
+    const g = 1450;
+    ball.vy += g * dt;
+
+    ball.x += ball.vx * dt;
+    ball.y += ball.vy * dt;
+
+    // 판정: 프레임 사이에서 공과 움직이는 히트박스가 닿기만 해도 성공
+    const { dist } = minDistanceInFrame(prevX, prevY);
+    ball.bestDist = Math.min(ball.bestDist, dist);
+    if (dist <= target.hitR) {
+      ball.active = false;
+      finishThrowByDistance(dist);
+      return;
+    }
+
+    if (ball.y > world.h + 60 || ball.x < -60 || ball.x > world.w + 60) {
+      ball.active = false;
+      finishThrowByDistance(ball.bestDist);
+    }
   }
 
   // Tap-hold charge
@@ -583,6 +624,16 @@
       ctx.fillText(`CHARGE ${Math.round(state.chargePower * 100)}%`, 18, 28);
     } else {
       ctx.fillText(`야생의 몬스터가 나타났다! · ${BUILD_VERSION}`, 18, 28);
+    }
+
+    if (feedback.text && performance.now() < feedback.until) {
+      const remain = clamp((feedback.until - performance.now()) / 820, 0, 1);
+      ctx.globalAlpha = 0.35 + remain * 0.65;
+      ctx.fillStyle = feedback.color;
+      ctx.font = `${Math.round(26 * feedback.scale)}px ui-sans-serif, system-ui, -apple-system, Apple SD Gothic Neo, Noto Sans KR, sans-serif`;
+      ctx.textAlign = "center";
+      ctx.fillText(feedback.text, world.w * 0.5, world.h * 0.16);
+      ctx.textAlign = "start";
     }
 
     ctx.restore();
