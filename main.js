@@ -10,7 +10,7 @@ import {
   // =============================
   const DEFAULT_DIFFICULTY = 5;      // 1~5  (타겟 이동 속도)
   const DEFAULT_SENSITIVITY = 2;   // 내부 계산용(현재 고정)
-  const COUPON_COOLDOWN_MS = 2 * 60 * 60 * 1000; // 2시간
+  const COUPON_COOLDOWN_MS = 3 * 60 * 60 * 1000; // 3시간
   const BASE_TARGET_HIT_RADIUS = 18; // 기본 히트박스 반경(px)
   const IRREGULAR_SPEED_MIN = 0.6;   // 불규칙 속도 최소 배율
   const IRREGULAR_SPEED_MAX = 1.0;   // 불규칙 속도 최대 배율
@@ -20,7 +20,7 @@ import {
     combo2Plus: { suddenTurnChance: 0.012, hitRadius: 18 },
     combo3Plus: { suddenTurnChance: 0.012, hitRadius: 16 },
     combo4Plus: { suddenTurnChance: 0.012, hitRadius: 14 },
-    combo5Plus: { suddenTurnChance: 0.012, hitRadius: 12 },
+    combo5Plus: { suddenTurnChance: 0.012, hitRadius: 13 },
   };
 
   // ===== 타겟(몬스터) 정의 =====
