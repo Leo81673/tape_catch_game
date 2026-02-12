@@ -65,7 +65,18 @@ body{
 .lb-title{font-weight:900;font-size:15px;margin-bottom:8px}
 
 .main{margin-top:12px}
+.game-logo-wrap{
+  margin:10px 0 12px;
+  display:flex;
+  justify-content:center;
+}
+.game-logo{
+  width:min(100%, 420px);
+  height:auto;
+  display:block;
+}
 #cv{
+
   width:100%;
   -webkit-tap-highlight-color: transparent;
   height:52vh;
