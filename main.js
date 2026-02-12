@@ -970,7 +970,10 @@ import {
     if (state.holding) {
       ctx.fillText(`CHARGE ${Math.round(state.chargePower * 100)}%`, 18, 28);
     } else {
-      ctx.fillText(`야생의 ${currentTargetDef.name}이(가) 나타났다! · ${BUILD_VERSION}`, 18, 28);
+      ctx.textAlign = "center";
+      ctx.fillText(`야생의 ${currentTargetDef.name}이(가) 나타났다!`, world.w * 0.5, 28);
+      ctx.fillText(BUILD_VERSION, world.w * 0.5, 50);
+      ctx.textAlign = "start";
     }
 
     // 축하 연출 배경
