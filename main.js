@@ -14,7 +14,7 @@ import {
   const COUPON_COOLDOWN_MS = 3 * 60 * 60 * 1000; // 3시간
   const BASE_TARGET_HIT_RADIUS = 18; // 기본 히트박스 반경(px)
   const USE_TARGET_IMAGE = false;     // PNG 사용할지 여부
-  const BUILD_VERSION = "연습 게임"; // 배포 확인용 버전(코드 수정 시 올리기)
+  const BUILD_VERSION = "5콤보를 연습 해보세요"; // 배포 확인용 버전(코드 수정 시 올리기)
   const GAME_URL = "qr.codes/5pilL6";
   const COMBO_DIFFICULTY_SETTINGS = {
     combo0to1: { speedLevel: 4, hitRadius: 18, suddenTurnChance: 0.0, irregularEnabled: false, irregularSpeedMin: 1.0, irregularSpeedMax: 1.0, irregularIntervalMin: 1.4, irregularIntervalMax: 2.0 },
