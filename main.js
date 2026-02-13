@@ -15,7 +15,7 @@ import {
   const IRREGULAR_SPEED_MIN = 0.6;   // 불규칙 속도 최소 배율
   const IRREGULAR_SPEED_MAX = 1.0;   // 불규칙 속도 최대 배율
   const USE_TARGET_IMAGE = true;     // PNG 사용할지 여부
-  const BUILD_VERSION = "5콤보시 쿠폰 증정!1"; // 배포 확인용 버전(코드 수정 시 올리기)
+  const BUILD_VERSION = "5콤보시 쿠폰 증정!2"; // 배포 확인용 버전(코드 수정 시 올리기)
   const COMBO_DIFFICULTY_SETTINGS = {
     combo2Plus: { suddenTurnChance: 0.010, hitRadius: 18 },
     combo3Plus: { suddenTurnChance: 0.010, hitRadius: 16 },
@@ -38,7 +38,7 @@ import {
   const COIN_RECHARGE_MS = 60 * 1000; // 코인 충전 시간 (1분)
 
   // ===== 위치 파악 설정 =====
-  const ENABLE_LOCATION_CHECK = true; // true: 위치 파악 켜기, false: 끄기
+  const ENABLE_LOCATION_CHECK = false; // true: 위치 파악 켜기, false: 끄기
   const TARGET_LAT = 37.5340;         // 서울특별시 용산구 이태원로 196 위도
   const TARGET_LNG = 126.9948;        // 서울특별시 용산구 이태원로 196 경도
   const LOCATION_RADIUS_M = 300;      // 허용 반경 (미터)
