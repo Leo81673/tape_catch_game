@@ -223,3 +223,11 @@ body{
 .admin-data-table .adm-header{background:rgba(255,255,255,0.06);font-weight:700;color:var(--muted)}
 .admin-data-table .adm-row span:not(:first-child):not(:nth-child(2)){text-align:center}
 .coin-submit-wrap{border-top:1px solid rgba(255,255,255,0.08);margin-top:12px;padding-top:4px}
+
+.result-card-image{
+  width:100%;
+  border-radius:12px;
+  border:1px solid rgba(255,255,255,0.12);
+  background:rgba(0,0,0,0.25);
+}
+.modal-actions{gap:8px;flex-wrap:wrap}

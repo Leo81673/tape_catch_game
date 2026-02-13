@@ -89,6 +89,20 @@
     </div>
   </div>
 
+
+  <div id="resultCardModal" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="modal-card">
+      <div id="resultCardTitle" class="modal-title">결과 카드</div>
+      <div class="modal-body">
+        <img id="resultCardImage" class="result-card-image" alt="결과 카드 이미지" />
+      </div>
+      <div class="modal-actions">
+        <button id="btnDownloadCard" class="btn primary">이미지 다운로드</button>
+        <button id="btnCloseCard" class="btn">닫기</button>
+      </div>
+    </div>
+  </div>
+
   <!-- 위치 차단 모달 -->
   <div id="locationModal" class="modal hidden" role="dialog" aria-modal="true">
     <div class="modal-card">
@@ -116,11 +130,11 @@
           <div style="font-weight:700;font-size:13px;margin-bottom:8px;">📋 난이도 설정 가이드 (main.js 수정)</div>
           <div style="font-size:11px;color:var(--muted);line-height:1.6;">
             COMBO_DIFFICULTY_SETTINGS에서 콤보별 설정 변경 가능:<br>
-            • <b>speed</b>: 이동 속도 (1단계=220 ~ 10단계=1030)<br>
+            • <b>speedLevel</b>: 속도 단계 (1~10)<br>
             • <b>hitRadius</b>: 히트박스 반경 (작을수록 어려움)<br>
             • <b>suddenTurnChance</b>: 방향전환 확률 (0~1)<br>
-            • <b>irregularSpeedMax</b>: 불규칙 속도 최대 배율<br>
-            • <b>irregularEnabled</b>: 불규칙 속도 ON/OFF
+            • <b>irregularSpeedMin/Max</b>: 불규칙 속도 배율 범위<br>
+            • <b>irregularIntervalMin/Max</b>: 배율 변경 주기(초)
           </div>
           <div id="adminDifficultyPreview" style="margin-top:8px;font-size:11px;font-family:monospace;color:#9fb0cc;max-height:200px;overflow-y:auto;"></div>
         </div>
