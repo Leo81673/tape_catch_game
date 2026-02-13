@@ -75,7 +75,7 @@ import {
 
   // 🔴 여기 날짜를 게임 오픈일 00:00 (한국시간)으로 설정하세요
   // 예: 2026년 2월 12일 오픈이면 아래 그대로 사용
-  const RESET_ANCHOR_KST = "2026-02-12T00:00:00+09:00";
+  const RESET_ANCHOR_KST = "2026-02-14T21:00:00+09:00";
   
   function currentBucketId() {
     const anchor = new Date(RESET_ANCHOR_KST).getTime();
