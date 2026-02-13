@@ -17,11 +17,17 @@ service cloud.firestore {
         && request.resource.data.score is int
         && request.resource.data.monsters is int
         && request.resource.data.maxCombo is int
-        && request.resource.data.bucketId is int
+        && (request.resource.data.bucketId is int || request.resource.data.bucketId is string)
         && request.resource.data.clientId is string;
 
       // 수정/삭제는 불가
       allow update, delete: if false;
+    }
+
+    // config 컬렉션: 리더보드 설정 (관리자용)
+    match /config/{docId} {
+      allow read: if true;
+      allow write: if true;
     }
   }
 }
