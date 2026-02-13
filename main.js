@@ -12,8 +12,8 @@ import {
   const DEFAULT_SENSITIVITY = 2;   // 내부 계산용(현재 고정)
   const COUPON_COOLDOWN_MS = 3 * 60 * 60 * 1000; // 3시간
   const IRREGULAR_SPEED_MIN = 0.6;   // 불규칙 속도 최소 배율 (글로벌 기본값)
-  const USE_TARGET_IMAGE = true;     // true: PNG 사용, false: 이모지+이름 사용
-  const BUILD_VERSION = "5콤보시 쿠폰 증정!2"; // 배포 확인용 버전(코드 수정 시 올리기)
+  const USE_TARGET_IMAGE = false;     // true: PNG 사용, false: 이모지+이름 사용
+  const BUILD_VERSION = "5콤보시 쿠폰 증정!"; // 배포 확인용 버전(코드 수정 시 올리기)
   const GAME_URL = "tapemongo.web.app";  // 결과 카드에 표시할 게임 주소
 
   // ===== 콤보별 난이도 설정 (모든 난이도를 수동으로 설정) =====
