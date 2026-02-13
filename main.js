@@ -90,6 +90,16 @@ import {
   const $ = (id) => document.getElementById(id);
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
+  function targetDisplayName(def) {
+    return USE_TARGET_IMAGE ? def.pngName : def.emojiName;
+  }
+
+  function targetDisplayLabel(def) {
+    const name = targetDisplayName(def);
+    if (USE_TARGET_IMAGE) return name;
+    return `${name}(${def.tier})`;
+  }
+
   // Audio (항상 ON)
   let audioCtx = null;
   function beep(freq = 880, dur = 0.06, gain = 0.06) {
