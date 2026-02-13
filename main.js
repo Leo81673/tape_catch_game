@@ -9,28 +9,28 @@ import {
   // =============================
   // ===== 운영자 설정(여기만 수정) =====
   // =============================
-  const DEFAULT_DIFFICULTY = 4;      // 1~5  (타겟 이동 속도)
+  const DEFAULT_DIFFICULTY = 4;      // 1~10  (타겟 이동 속도)
   const DEFAULT_SENSITIVITY = 2;   // 내부 계산용(현재 고정)
   const COUPON_COOLDOWN_MS = 3 * 60 * 60 * 1000; // 3시간
   const BASE_TARGET_HIT_RADIUS = 18; // 기본 히트박스 반경(px)
-  const IRREGULAR_SPEED_MIN = 0.6;   // 불규칙 속도 최소 배율
-  const IRREGULAR_SPEED_MAX = 1.0;   // 불규칙 속도 최대 배율
   const USE_TARGET_IMAGE = true;     // PNG 사용할지 여부
   const BUILD_VERSION = "5콤보시 쿠폰 증정!2"; // 배포 확인용 버전(코드 수정 시 올리기)
+  const GAME_URL = "https://tapemon-go.web.app";
   const COMBO_DIFFICULTY_SETTINGS = {
-    combo2Plus: { suddenTurnChance: 0.010, hitRadius: 18 },
-    combo3Plus: { suddenTurnChance: 0.010, hitRadius: 16 },
-    combo4Plus: { suddenTurnChance: 0.010, hitRadius: 14 },
-    combo5Plus: { suddenTurnChance: 0.010, hitRadius: 13 },
+    combo0to1: { speedLevel: 4, hitRadius: 18, suddenTurnChance: 0.0, irregularEnabled: false, irregularSpeedMin: 1.0, irregularSpeedMax: 1.0, irregularIntervalMin: 1.4, irregularIntervalMax: 2.0 },
+    combo2: { speedLevel: 5, hitRadius: 18, suddenTurnChance: 0.01, irregularEnabled: true, irregularSpeedMin: 0.85, irregularSpeedMax: 1.1, irregularIntervalMin: 1.1, irregularIntervalMax: 1.7 },
+    combo3: { speedLevel: 6, hitRadius: 16, suddenTurnChance: 0.01, irregularEnabled: true, irregularSpeedMin: 0.85, irregularSpeedMax: 1.2, irregularIntervalMin: 1.0, irregularIntervalMax: 1.5 },
+    combo4: { speedLevel: 7, hitRadius: 14, suddenTurnChance: 0.01, irregularEnabled: true, irregularSpeedMin: 0.8, irregularSpeedMax: 1.25, irregularIntervalMin: 0.9, irregularIntervalMax: 1.3 },
+    combo5Plus: { speedLevel: 8, hitRadius: 13, suddenTurnChance: 0.015, irregularEnabled: true, irregularSpeedMin: 0.75, irregularSpeedMax: 1.3, irregularIntervalMin: 0.7, irregularIntervalMax: 1.1 },
   };
 
   // ===== 타겟(몬스터) 정의 =====
   const TARGET_DEFS = [
-    { src: "target.png",  name: "피카츄",   weight: 31 },
-    { src: "target2.png", name: "파이리",   weight: 31 },
-    { src: "target3.png", name: "이상해씨",   weight: 30 },
-    { src: "target4.png", name: "뮤츠", weight: 5  },
-    { src: "target5.png", name: "뮤", weight: 3  },
+    { id: "target1", src: "target.png", name: "비어봇", emoji: "🤖", tier: "노멀", weight: 31 },
+    { id: "target2", src: "target2.png", name: "UFO 드링커", emoji: "👽", tier: "노멀", weight: 31 },
+    { id: "target3", src: "target3.png", name: "픽셀 취객", emoji: "👾", tier: "노멀", weight: 30 },
+    { id: "target4", src: "target4.png", name: "드렁큰 레인보우", emoji: "🦄", tier: "레어", weight: 5 },
+    { id: "target5", src: "target5.png", name: "스파이시 펌퀸", emoji: "🎃", tier: "레어", weight: 3 },
   ];
   const CATCH_COMBO_THRESHOLD = 3; // 이 콤보 달성 시 타겟 포획
 
@@ -198,6 +198,11 @@ import {
     until: 0,
   };
 
+  const resultCardState = {
+    imageUrl: "",
+    title: "",
+  };
+
   const target = {
     x: 0,
     y: 0,
@@ -277,28 +282,48 @@ import {
   let shakeIntensity = 0;
 
   function difficultySpeed(diff) {
-    // 1..5
-    return 220 + (diff - 1) * 90;
+    // 1..10
+    const d = clamp(Math.round(diff), 1, 10);
+    return 220 + (d - 1) * 90;
+  }
+
+  function rareSpawnPercent(def) {
+    const totalWeight = TARGET_DEFS.reduce((s, d) => s + d.weight, 0);
+    return ((def.weight / totalWeight) * 100).toFixed(1);
+  }
+
+  function isRareTarget(def) {
+    return def.id === "target4" || def.id === "target5";
+  }
+
+  function activeComboSettings(combo) {
+    if (combo >= 5) return COMBO_DIFFICULTY_SETTINGS.combo5Plus;
+    if (combo >= 4) return COMBO_DIFFICULTY_SETTINGS.combo4;
+    if (combo >= 3) return COMBO_DIFFICULTY_SETTINGS.combo3;
+    if (combo >= 2) return COMBO_DIFFICULTY_SETTINGS.combo2;
+    return COMBO_DIFFICULTY_SETTINGS.combo0to1;
+  }
+
+  function buildCardLines(kind, payload = {}) {
+    if (kind === "rare") {
+      return [
+        `나 ${payload.targetName} 잡았다!`,
+        `출현 확률 ${payload.spawnPercent}%`,
+      ];
+    }
+    if (kind === "all-caught") {
+      return ["5종 전체 포획 성공!", "진짜 몬스터 마스터 인정 👑"];
+    }
+    if (kind === "top10") {
+      return [`TOP 10 진입 성공! #${payload.rank}`, `${payload.name} 님 축하합니다!`];
+    }
+    return ["TAPEMON GO!", "오늘도 몬스터 GET!"];
   }
 
   // 콤보 기반 속도 보정
   let irregularTimer = 0;
+  let irregularNextInterval = 1.2;
   let irregularSpeedMul = 1;
-
-  function comboSpeedMultiplier(combo) {
-    // combo 0: 1.0x, combo 1: 1.25x, combo 2+: 1.40x (cap)
-    if (combo <= 0) return 1.0;
-    if (combo === 1) return 1.25;
-    return 1.40; // combo 2+ 에서 고정 (더 이상 난이도 증가 없음)
-  }
-
-  function comboTierSettings(combo) {
-    if (combo >= 5) return COMBO_DIFFICULTY_SETTINGS.combo5Plus;
-    if (combo >= 4) return COMBO_DIFFICULTY_SETTINGS.combo4Plus;
-    if (combo >= 3) return COMBO_DIFFICULTY_SETTINGS.combo3Plus;
-    if (combo >= 2) return COMBO_DIFFICULTY_SETTINGS.combo2Plus;
-    return { suddenTurnChance: 0, hitRadius: BASE_TARGET_HIT_RADIUS };
-  }
 
   // Combo visual styling
   let prevComboForAnim = 0;
@@ -470,6 +495,76 @@ import {
     const mm = String(now.getMinutes()).padStart(2,"0");
     return `${y}-${mo}-${d} ${hh}:${mm}`;
   }
+
+  async function makeResultCard(kind, payload = {}) {
+    const cardCanvas = document.createElement("canvas");
+    cardCanvas.width = 1080;
+    cardCanvas.height = 1920;
+    const c = cardCanvas.getContext("2d");
+
+    const bg = c.createLinearGradient(0, 0, 1080, 1920);
+    bg.addColorStop(0, "#1b1030");
+    bg.addColorStop(1, "#10081f");
+    c.fillStyle = bg;
+    c.fillRect(0, 0, 1080, 1920);
+
+    c.fillStyle = "rgba(255,255,255,0.08)";
+    c.fillRect(60, 180, 960, 1200);
+
+    c.fillStyle = "#f4a9b8";
+    c.font = "bold 72px sans-serif";
+    c.fillText("TAPEMON GO!", 80, 300);
+
+    const lines = buildCardLines(kind, payload);
+    c.fillStyle = "#ffffff";
+    c.font = "bold 84px sans-serif";
+    c.fillText(lines[0], 80, 520);
+    c.font = "bold 52px sans-serif";
+    c.fillStyle = "#d0e6ff";
+    c.fillText(lines[1], 80, 620);
+
+    c.fillStyle = "#9fb0cc";
+    c.font = "40px sans-serif";
+    c.fillText(`Score ${state.score} · Max Combo ${state.maxCombo}`, 80, 750);
+
+    await drawImageOnCard(c, "tape_logo_pink.png", 80, 60, 360, 98);
+    await drawImageOnCard(c, "tapemon_go_qr.png", 760, 1420, 220, 220);
+
+    c.fillStyle = "#eaf0ff";
+    c.font = "32px sans-serif";
+    c.fillText(GAME_URL, 690, 1685);
+
+    return cardCanvas.toDataURL("image/png");
+  }
+
+  function drawImageOnCard(ctx, src, x, y, w, h) {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        ctx.drawImage(img, x, y, w, h);
+        resolve();
+      };
+      img.onerror = () => resolve();
+      img.src = src;
+    });
+  }
+
+  async function showResultCard(kind, payload = {}) {
+    const imageUrl = await makeResultCard(kind, payload);
+    resultCardState.imageUrl = imageUrl;
+    resultCardState.title = buildCardLines(kind, payload)[0];
+    $("resultCardTitle").textContent = resultCardState.title;
+    $("resultCardImage").src = imageUrl;
+    $("resultCardModal").classList.remove("hidden");
+  }
+
+  function downloadResultCard() {
+    if (!resultCardState.imageUrl) return;
+    const a = document.createElement("a");
+    a.href = resultCardState.imageUrl;
+    a.download = `tapemon_card_${Date.now()}.png`;
+    a.click();
+  }
   // 축하 연출 상태
   const celebration = { active: false, until: 0, triggered: false };
 
@@ -477,8 +572,16 @@ import {
     if (state.combo < CATCH_COMBO_THRESHOLD) return;
     if (state.combo % CATCH_COMBO_THRESHOLD !== 0) return;
 
-    const name = currentTargetDef.name;
+    const caughtDef = currentTargetDef;
+    const name = caughtDef.name;
     state.caughtSet.add(name);
+
+    if (isRareTarget(caughtDef)) {
+      showResultCard("rare", {
+        targetName: `${caughtDef.emoji} ${caughtDef.name}`,
+        spawnPercent: rareSpawnPercent(caughtDef),
+      });
+    }
 
     // 모두 잡았는지 체크 (최초 1회만 축하 연출)
     if (state.caughtSet.size >= TARGET_DEFS.length && !celebration.triggered) {
@@ -487,6 +590,7 @@ import {
       catchMsg.until = performance.now() + 4000;
       celebration.active = true;
       celebration.until = performance.now() + 4000;
+      showResultCard("all-caught");
       // 대량 파티클 발사
       for (let i = 0; i < 5; i++) {
         const cx = world.w * (0.2 + Math.random() * 0.6);
@@ -627,31 +731,28 @@ import {
   function updateTarget(dt) {
     target.prevX = target.x;
 
-    const baseSpeed = difficultySpeed(state.difficulty);
-    const comboMul = comboSpeedMultiplier(state.combo);
-    let speed = baseSpeed * comboMul;
+    const tier = activeComboSettings(state.combo);
+    const speedLevel = clamp(tier.speedLevel ?? state.difficulty, 1, 10);
+    let speed = difficultySpeed(speedLevel);
 
-    const tier = comboTierSettings(state.combo);
-    target.hitR = tier.hitRadius;
+    target.hitR = tier.hitRadius ?? BASE_TARGET_HIT_RADIUS;
 
-    // combo 2+: 불규칙적 속도 변화 + 갑작스러운 방향 전환
-    if (state.combo >= 2) {
+    if (tier.irregularEnabled) {
       irregularTimer += dt;
-      // 주기적으로 속도 배율 변경 (0.5~1.8초 간격)
-      const interval = Math.max(0.5, 1.8 - state.combo * 0.12);
-      if (irregularTimer >= interval) {
+      if (irregularTimer >= irregularNextInterval) {
         irregularTimer = 0;
-        // 운영자 설정에 따른 랜덤 속도 배율
-        irregularSpeedMul = IRREGULAR_SPEED_MIN + Math.random() * (IRREGULAR_SPEED_MAX - IRREGULAR_SPEED_MIN);
+        irregularNextInterval = (tier.irregularIntervalMin || 0.8) + Math.random() * ((tier.irregularIntervalMax || 1.2) - (tier.irregularIntervalMin || 0.8));
+        irregularSpeedMul = (tier.irregularSpeedMin || 1) + Math.random() * ((tier.irregularSpeedMax || 1) - (tier.irregularSpeedMin || 1));
       }
       speed *= irregularSpeedMul;
-
-      if (Math.random() < tier.suddenTurnChance) {
-        target.dir *= -1;
-      }
     } else {
       irregularSpeedMul = 1;
       irregularTimer = 0;
+      irregularNextInterval = 1.2;
+    }
+
+    if (Math.random() < (tier.suddenTurnChance || 0)) {
+      target.dir *= -1;
     }
 
     target.vx = speed;
@@ -964,7 +1065,7 @@ import {
     ctx.save();
     ctx.translate(target.x, target.y);
 
-    const rareLevel = currentTargetDef.src === "target5.png" ? 2 : (currentTargetDef.src === "target4.png" ? 1 : 0);
+    const rareLevel = currentTargetDef.id === "target5" ? 2 : (currentTargetDef.id === "target4" ? 1 : 0);
     const t = performance.now() * 0.001;
 
     if (rareLevel >= 1) {
@@ -1002,11 +1103,15 @@ import {
       const h = target.drawH;
       ctx.drawImage(curImg, -w/2, -h/2, w, h);
     } else {
-      // fallback (원형)
-      ctx.beginPath();
-      ctx.fillStyle = "rgba(234,240,255,0.9)";
-      ctx.arc(0, 0, 18, 0, Math.PI * 2);
-      ctx.fill();
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.font = "42px sans-serif";
+      ctx.fillText(currentTargetDef.emoji || "👾", 0, -8);
+      ctx.font = "bold 13px sans-serif";
+      ctx.fillStyle = "rgba(234,240,255,0.95)";
+      ctx.fillText(currentTargetDef.name, 0, 26);
+      ctx.textAlign = "start";
+      ctx.textBaseline = "alphabetic";
     }
 
     // 히트박스 시각화 (육안 판정 기준) - combo에 따라 색상 변경
@@ -1089,8 +1194,8 @@ import {
       ctx.fillText(`CHARGE ${Math.round(state.chargePower * 100)}%`, 18, 28);
     } else {
       ctx.textAlign = "center";
-      const isRare = currentTargetDef.src === "target4.png" || currentTargetDef.src === "target5.png";
-      let appearText = `야생의 ${currentTargetDef.name}가 나타났다!`;
+      const isRare = isRareTarget(currentTargetDef);
+      let appearText = `야생의 ${currentTargetDef.emoji || "👾"} ${currentTargetDef.name}(${currentTargetDef.tier})가 나타났다!`;
       if (isRare) {
         const totalW = TARGET_DEFS.reduce((s, d) => s + d.weight, 0);
         const pct = Math.round((currentTargetDef.weight / totalW) * 100);
@@ -1241,6 +1346,14 @@ import {
     hideCouponModal();
   });
 
+  $("btnCloseCard").addEventListener("click", () => {
+    $("resultCardModal").classList.add("hidden");
+  });
+
+  $("btnDownloadCard").addEventListener("click", () => {
+    downloadResultCard();
+  });
+
   async function submitScore(name) {
     if (!name) {
       alert("인스타그램 ID를 입력해주세요.");
@@ -1292,6 +1405,9 @@ import {
       const rank = higherCount + 1;
 
       alert(`등록 완료! 현재 ${rank}등 입니다.`);
+      if (rank <= 10) {
+        showResultCard("top10", { rank, name });
+      }
     } catch (err) {
       console.error("[Firebase] 점수 등록 실패", err);
       const code = err?.code || "";
@@ -1486,8 +1602,6 @@ import {
   
   init();
 })();
-
-
 
 
 
