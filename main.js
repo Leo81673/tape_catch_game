@@ -39,8 +39,8 @@ import {
 
   // ===== 위치 파악 설정 =====
   const ENABLE_LOCATION_CHECK = false; // true: 위치 파악 켜기, false: 끄기
-  const TARGET_LAT = 37.5340;         // 서울특별시 용산구 이태원로 196 위도
-  const TARGET_LNG = 126.9948;        // 서울특별시 용산구 이태원로 196 경도
+  const TARGET_LAT = 37.5344;         // 서울특별시 용산구 이태원로 위도
+  const TARGET_LNG = 126.9954;        // 서울특별시 용산구 이태원로 경도
   const LOCATION_RADIUS_M = 300;      // 허용 반경 (미터)
   // =============================
 
