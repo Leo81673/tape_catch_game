@@ -8,14 +8,14 @@ import {
   // =============================
   // ===== 운영자 설정(여기만 수정) =====
   // =============================
-  const DEFAULT_DIFFICULTY = 5;      // 1~5  (타겟 이동 속도)
+  const DEFAULT_DIFFICULTY = 4;      // 1~5  (타겟 이동 속도)
   const DEFAULT_SENSITIVITY = 2;   // 내부 계산용(현재 고정)
   const COUPON_COOLDOWN_MS = 3 * 60 * 60 * 1000; // 3시간
   const BASE_TARGET_HIT_RADIUS = 18; // 기본 히트박스 반경(px)
   const IRREGULAR_SPEED_MIN = 0.6;   // 불규칙 속도 최소 배율
   const IRREGULAR_SPEED_MAX = 1.0;   // 불규칙 속도 최대 배율
   const USE_TARGET_IMAGE = true;     // PNG 사용할지 여부
-  const BUILD_VERSION = "5콤보시 쿠폰 증정!"; // 배포 확인용 버전(코드 수정 시 올리기)
+  const BUILD_VERSION = "5콤보시 쿠폰 증정!1"; // 배포 확인용 버전(코드 수정 시 올리기)
   const COMBO_DIFFICULTY_SETTINGS = {
     combo2Plus: { suddenTurnChance: 0.010, hitRadius: 18 },
     combo3Plus: { suddenTurnChance: 0.010, hitRadius: 16 },
