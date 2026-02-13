@@ -35,7 +35,7 @@ import {
 
   // ===== 코인 시스템 설정 =====
   const MAX_COINS = 3;              // 최대 코인 수
-  const COIN_RECHARGE_MS = 60 * 1000; // 코인 충전 시간 (1분)
+  const COIN_RECHARGE_MS = 30 * 1000; // 코인 충전 시간 (30초)
 
   // ===== 위치 파악 설정 =====
   const ENABLE_LOCATION_CHECK = false; // true: 위치 파악 켜기, false: 끄기
