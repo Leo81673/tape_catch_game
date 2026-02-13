@@ -18,10 +18,10 @@ import {
   const GAME_URL = "https://tapemon-go.web.app";
   const COMBO_DIFFICULTY_SETTINGS = {
     combo0to1: { speedLevel: 4, hitRadius: 18, suddenTurnChance: 0.0, irregularEnabled: false, irregularSpeedMin: 1.0, irregularSpeedMax: 1.0, irregularIntervalMin: 1.4, irregularIntervalMax: 2.0 },
-    combo2: { speedLevel: 5, hitRadius: 18, suddenTurnChance: 0.01, irregularEnabled: true, irregularSpeedMin: 0.85, irregularSpeedMax: 1.1, irregularIntervalMin: 1.1, irregularIntervalMax: 1.7 },
-    combo3: { speedLevel: 6, hitRadius: 16, suddenTurnChance: 0.01, irregularEnabled: true, irregularSpeedMin: 0.85, irregularSpeedMax: 1.2, irregularIntervalMin: 1.0, irregularIntervalMax: 1.5 },
-    combo4: { speedLevel: 7, hitRadius: 14, suddenTurnChance: 0.01, irregularEnabled: true, irregularSpeedMin: 0.8, irregularSpeedMax: 1.25, irregularIntervalMin: 0.9, irregularIntervalMax: 1.3 },
-    combo5Plus: { speedLevel: 8, hitRadius: 13, suddenTurnChance: 0.015, irregularEnabled: true, irregularSpeedMin: 0.75, irregularSpeedMax: 1.3, irregularIntervalMin: 0.7, irregularIntervalMax: 1.1 },
+    combo2: { speedLevel: 5, hitRadius: 18, suddenTurnChance: 0.01, irregularEnabled: true, irregularSpeedMin: 0.8, irregularSpeedMax: 1.05, irregularIntervalMin: 1.1, irregularIntervalMax: 1.7 },
+    combo3: { speedLevel: 5, hitRadius: 16, suddenTurnChance: 0.01, irregularEnabled: true, irregularSpeedMin: 0.75, irregularSpeedMax: 1.05, irregularIntervalMin: 1.1, irregularIntervalMax: 1.7 },
+    combo4: { speedLevel: 5, hitRadius: 14, suddenTurnChance: 0.01, irregularEnabled: true, irregularSpeedMin: 0.7, irregularSpeedMax: 1.05, irregularIntervalMin: 1.1, irregularIntervalMax: 1.7 },
+    combo5Plus: { speedLevel: 5, hitRadius: 13, suddenTurnChance: 0.01, irregularEnabled: true, irregularSpeedMin: 0.7, irregularSpeedMax: 1.05, irregularIntervalMin: 1.1, irregularIntervalMax: 1.7 },
   };
 
   // ===== 타겟(몬스터) 정의 =====
