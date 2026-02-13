@@ -9,28 +9,43 @@ import {
   // =============================
   // ===== 운영자 설정(여기만 수정) =====
   // =============================
-  const DEFAULT_DIFFICULTY = 4;      // 1~5  (타겟 이동 속도)
   const DEFAULT_SENSITIVITY = 2;   // 내부 계산용(현재 고정)
   const COUPON_COOLDOWN_MS = 3 * 60 * 60 * 1000; // 3시간
-  const BASE_TARGET_HIT_RADIUS = 18; // 기본 히트박스 반경(px)
-  const IRREGULAR_SPEED_MIN = 0.6;   // 불규칙 속도 최소 배율
-  const IRREGULAR_SPEED_MAX = 1.0;   // 불규칙 속도 최대 배율
-  const USE_TARGET_IMAGE = true;     // PNG 사용할지 여부
+  const IRREGULAR_SPEED_MIN = 0.6;   // 불규칙 속도 최소 배율 (글로벌 기본값)
+  const USE_TARGET_IMAGE = true;     // true: PNG 사용, false: 이모지+이름 사용
   const BUILD_VERSION = "5콤보시 쿠폰 증정!2"; // 배포 확인용 버전(코드 수정 시 올리기)
+  const GAME_URL = "tapemongo.web.app";  // 결과 카드에 표시할 게임 주소
+
+  // ===== 콤보별 난이도 설정 (모든 난이도를 수동으로 설정) =====
+  // speed: 타겟 이동 속도 (px/sec). 1~10 단계 기준: 220 + (단계-1)*90
+  //   1=220, 2=310, 3=400, 4=490, 5=580, 6=670, 7=760, 8=850, 9=940, 10=1030
+  // hitRadius: 히트박스 반경(px)
+  // suddenTurnChance: 갑작스러운 방향 전환 확률 (0~1, 프레임당)
+  // irregularSpeedMax: 불규칙 속도 최대 배율 (최소는 IRREGULAR_SPEED_MIN 사용)
+  // irregularEnabled: 불규칙 속도 변화 사용 여부
   const COMBO_DIFFICULTY_SETTINGS = {
-    combo2Plus: { suddenTurnChance: 0.010, hitRadius: 18 },
-    combo3Plus: { suddenTurnChance: 0.010, hitRadius: 16 },
-    combo4Plus: { suddenTurnChance: 0.010, hitRadius: 14 },
-    combo5Plus: { suddenTurnChance: 0.010, hitRadius: 13 },
+    combo0: { speed: 490, hitRadius: 18, suddenTurnChance: 0, irregularSpeedMax: 1.0, irregularEnabled: false },
+    combo1: { speed: 490, hitRadius: 18, suddenTurnChance: 0, irregularSpeedMax: 1.0, irregularEnabled: false },
+    combo2: { speed: 580, hitRadius: 18, suddenTurnChance: 0.010, irregularSpeedMax: 1.0, irregularEnabled: true },
+    combo3: { speed: 580, hitRadius: 16, suddenTurnChance: 0.010, irregularSpeedMax: 1.2, irregularEnabled: true },
+    combo4: { speed: 670, hitRadius: 14, suddenTurnChance: 0.010, irregularSpeedMax: 1.3, irregularEnabled: true },
+    combo5: { speed: 670, hitRadius: 13, suddenTurnChance: 0.010, irregularSpeedMax: 1.4, irregularEnabled: true },
+    combo6: { speed: 760, hitRadius: 13, suddenTurnChance: 0.015, irregularSpeedMax: 1.5, irregularEnabled: true },
+    combo7: { speed: 760, hitRadius: 12, suddenTurnChance: 0.015, irregularSpeedMax: 1.5, irregularEnabled: true },
+    combo8: { speed: 850, hitRadius: 12, suddenTurnChance: 0.020, irregularSpeedMax: 1.6, irregularEnabled: true },
+    combo9: { speed: 850, hitRadius: 11, suddenTurnChance: 0.020, irregularSpeedMax: 1.6, irregularEnabled: true },
+    combo10Plus: { speed: 940, hitRadius: 10, suddenTurnChance: 0.025, irregularSpeedMax: 1.8, irregularEnabled: true },
   };
 
   // ===== 타겟(몬스터) 정의 =====
+  // emoji/name: USE_TARGET_IMAGE=false 일 때 이모지+이름으로 표시
+  // rarity: "normal" | "rare" (레어 타겟은 특수 이펙트 + 결과 카드 생성)
   const TARGET_DEFS = [
-    { src: "target.png",  name: "피카츄",   weight: 31 },
-    { src: "target2.png", name: "파이리",   weight: 31 },
-    { src: "target3.png", name: "이상해씨",   weight: 30 },
-    { src: "target4.png", name: "뮤츠", weight: 5  },
-    { src: "target5.png", name: "뮤", weight: 3  },
+    { src: "target.png",  name: "비어봇",         emoji: "🤖", weight: 31, rarity: "normal" },
+    { src: "target2.png", name: "UFO 드링커",     emoji: "👽", weight: 31, rarity: "normal" },
+    { src: "target3.png", name: "픽셀 취객",       emoji: "👾", weight: 30, rarity: "normal" },
+    { src: "target4.png", name: "드렁큰 레인보우", emoji: "🦄", weight: 5,  rarity: "rare" },
+    { src: "target5.png", name: "스파이시 펌퀸",   emoji: "🎃", weight: 3,  rarity: "rare" },
   ];
   const CATCH_COMBO_THRESHOLD = 3; // 이 콤보 달성 시 타겟 포획
 
@@ -159,7 +174,6 @@ import {
     maxCombo: 0,
     best: 0,
 
-    difficulty: DEFAULT_DIFFICULTY,
     sensitivity: DEFAULT_SENSITIVITY,
 
     // Tap-hold charge
@@ -276,28 +290,14 @@ import {
   let shakeUntil = 0;
   let shakeIntensity = 0;
 
-  function difficultySpeed(diff) {
-    // 1..5
-    return 220 + (diff - 1) * 90;
-  }
-
   // 콤보 기반 속도 보정
   let irregularTimer = 0;
   let irregularSpeedMul = 1;
 
-  function comboSpeedMultiplier(combo) {
-    // combo 0: 1.0x, combo 1: 1.25x, combo 2+: 1.40x (cap)
-    if (combo <= 0) return 1.0;
-    if (combo === 1) return 1.25;
-    return 1.40; // combo 2+ 에서 고정 (더 이상 난이도 증가 없음)
-  }
-
   function comboTierSettings(combo) {
-    if (combo >= 5) return COMBO_DIFFICULTY_SETTINGS.combo5Plus;
-    if (combo >= 4) return COMBO_DIFFICULTY_SETTINGS.combo4Plus;
-    if (combo >= 3) return COMBO_DIFFICULTY_SETTINGS.combo3Plus;
-    if (combo >= 2) return COMBO_DIFFICULTY_SETTINGS.combo2Plus;
-    return { suddenTurnChance: 0, hitRadius: BASE_TARGET_HIT_RADIUS };
+    if (combo >= 10) return COMBO_DIFFICULTY_SETTINGS.combo10Plus;
+    const key = `combo${combo}`;
+    return COMBO_DIFFICULTY_SETTINGS[key] || COMBO_DIFFICULTY_SETTINGS.combo0;
   }
 
   // Combo visual styling
@@ -477,7 +477,9 @@ import {
     if (state.combo < CATCH_COMBO_THRESHOLD) return;
     if (state.combo % CATCH_COMBO_THRESHOLD !== 0) return;
 
-    const name = currentTargetDef.name;
+    const caughtDef = currentTargetDef;
+    const name = caughtDef.name;
+    const wasNew = !state.caughtSet.has(name);
     state.caughtSet.add(name);
 
     // 모두 잡았는지 체크 (최초 1회만 축하 연출)
@@ -496,10 +498,18 @@ import {
       beep(1500, 0.12, 0.1);
       setTimeout(() => beep(1800, 0.12, 0.1), 150);
       setTimeout(() => beep(2200, 0.15, 0.1), 300);
+
+      // 전종 포획 결과 카드
+      setTimeout(() => triggerAllCatchCard(), 1500);
     } else if (state.caughtSet.size < TARGET_DEFS.length) {
       // 포획 메시지 표시
       catchMsg.text = `${name}을(를) 잡았다!`;
       catchMsg.until = performance.now() + 2000;
+    }
+
+    // 레어 몬스터 포획 시 결과 카드 (전종 포획 카드와 중복 방지)
+    if (wasNew && caughtDef.rarity === "rare" && state.caughtSet.size < TARGET_DEFS.length) {
+      setTimeout(() => triggerRareCatchCard(caughtDef), 800);
     }
 
     // 다른 타겟으로 교체
@@ -620,29 +630,24 @@ import {
     target.y = world.h * 0.30;
     target.x = world.w * 0.5;
     target.prevX = target.x;
-    target.vx = difficultySpeed(state.difficulty);
+    target.vx = comboTierSettings(0).speed;
     beep(990, 0.06, 0.06);
   }
 
   function updateTarget(dt) {
     target.prevX = target.x;
 
-    const baseSpeed = difficultySpeed(state.difficulty);
-    const comboMul = comboSpeedMultiplier(state.combo);
-    let speed = baseSpeed * comboMul;
-
     const tier = comboTierSettings(state.combo);
+    let speed = tier.speed;
     target.hitR = tier.hitRadius;
 
-    // combo 2+: 불규칙적 속도 변화 + 갑작스러운 방향 전환
-    if (state.combo >= 2) {
+    // 불규칙 속도 변화 (콤보별 설정에서 활성화된 경우만)
+    if (tier.irregularEnabled) {
       irregularTimer += dt;
-      // 주기적으로 속도 배율 변경 (0.5~1.8초 간격)
       const interval = Math.max(0.5, 1.8 - state.combo * 0.12);
       if (irregularTimer >= interval) {
         irregularTimer = 0;
-        // 운영자 설정에 따른 랜덤 속도 배율
-        irregularSpeedMul = IRREGULAR_SPEED_MIN + Math.random() * (IRREGULAR_SPEED_MAX - IRREGULAR_SPEED_MIN);
+        irregularSpeedMul = IRREGULAR_SPEED_MIN + Math.random() * (tier.irregularSpeedMax - IRREGULAR_SPEED_MIN);
       }
       speed *= irregularSpeedMul;
 
@@ -964,7 +969,8 @@ import {
     ctx.save();
     ctx.translate(target.x, target.y);
 
-    const rareLevel = currentTargetDef.src === "target5.png" ? 2 : (currentTargetDef.src === "target4.png" ? 1 : 0);
+    // rareLevel: 0=normal, 1=rare(weight>3), 2=ultra-rare(weight<=3)
+    const rareLevel = currentTargetDef.rarity === "rare" ? (currentTargetDef.weight <= 3 ? 2 : 1) : 0;
     const t = performance.now() * 0.001;
 
     if (rareLevel >= 1) {
@@ -1002,11 +1008,16 @@ import {
       const h = target.drawH;
       ctx.drawImage(curImg, -w/2, -h/2, w, h);
     } else {
-      // fallback (원형)
-      ctx.beginPath();
-      ctx.fillStyle = "rgba(234,240,255,0.9)";
-      ctx.arc(0, 0, 18, 0, Math.PI * 2);
-      ctx.fill();
+      // fallback: 이모지 + 이름 표시
+      ctx.font = "42px serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(currentTargetDef.emoji || "⬜", 0, -4);
+      ctx.font = "bold 11px ui-sans-serif, system-ui, -apple-system, Apple SD Gothic Neo, Noto Sans KR, sans-serif";
+      ctx.fillStyle = "rgba(234,240,255,0.95)";
+      ctx.fillText(currentTargetDef.name, 0, 28);
+      ctx.textAlign = "start";
+      ctx.textBaseline = "alphabetic";
     }
 
     // 히트박스 시각화 (육안 판정 기준) - combo에 따라 색상 변경
@@ -1089,7 +1100,7 @@ import {
       ctx.fillText(`CHARGE ${Math.round(state.chargePower * 100)}%`, 18, 28);
     } else {
       ctx.textAlign = "center";
-      const isRare = currentTargetDef.src === "target4.png" || currentTargetDef.src === "target5.png";
+      const isRare = currentTargetDef.rarity === "rare";
       let appearText = `야생의 ${currentTargetDef.name}가 나타났다!`;
       if (isRare) {
         const totalW = TARGET_DEFS.reduce((s, d) => s + d.weight, 0);
@@ -1292,6 +1303,11 @@ import {
       const rank = higherCount + 1;
 
       alert(`등록 완료! 현재 ${rank}등 입니다.`);
+
+      // TOP 10 진입 시 축하 카드 자동 생성
+      if (rank <= 10) {
+        setTimeout(() => triggerTop10Card(rank, name), 500);
+      }
     } catch (err) {
       console.error("[Firebase] 점수 등록 실패", err);
       const code = err?.code || "";
@@ -1354,6 +1370,15 @@ import {
       const pw = prompt("관리자 비밀번호를 입력하세요:");
       if (pw === ADMIN_PASSWORD) {
         $("adminModal").classList.remove("hidden");
+        // 난이도 프리뷰 렌더링
+        const previewEl = $("adminDifficultyPreview");
+        if (previewEl) {
+          let html = "";
+          for (const [key, val] of Object.entries(COMBO_DIFFICULTY_SETTINGS)) {
+            html += `<div style="margin-bottom:2px;">${key}: speed=${val.speed} hit=${val.hitRadius} turn=${val.suddenTurnChance} irrMax=${val.irregularSpeedMax} ${val.irregularEnabled ? "ON" : "OFF"}</div>`;
+          }
+          previewEl.innerHTML = html;
+        }
       } else if (pw !== null) {
         alert("비밀번호가 올바르지 않습니다.");
       }
@@ -1445,6 +1470,262 @@ import {
       table.innerHTML += `<div class="adm-row"><span>조회 실패: ${escapeHtml(err?.message || "")}</span></div>`;
     }
   });
+
+  // ===== 결과 카드 생성 (인스타그램 바이럴) =====
+  const cardLogoImg = new Image();
+  cardLogoImg.src = "tape_logo_pink.png";
+  const cardQrImg = new Image();
+  cardQrImg.src = "tapemon_go_qr.png";
+
+  // 카드 타입: "rare_catch" | "all_catch" | "top10"
+  function generateResultCard(type, extra = {}) {
+    const W = 1080, H = 1920; // 인스타 스토리 비율
+    const offCv = document.createElement("canvas");
+    offCv.width = W; offCv.height = H;
+    const c = offCv.getContext("2d");
+
+    // 배경 그라디언트
+    const bg = c.createLinearGradient(0, 0, W, H);
+    if (type === "all_catch") {
+      bg.addColorStop(0, "#1a0a2e");
+      bg.addColorStop(0.5, "#2d1b69");
+      bg.addColorStop(1, "#0a0a1a");
+    } else if (type === "top10") {
+      bg.addColorStop(0, "#1a1a0a");
+      bg.addColorStop(0.5, "#2d2200");
+      bg.addColorStop(1, "#0a0a1a");
+    } else {
+      bg.addColorStop(0, "#0b0f14");
+      bg.addColorStop(0.5, "#111830");
+      bg.addColorStop(1, "#0b0f14");
+    }
+    c.fillStyle = bg;
+    c.fillRect(0, 0, W, H);
+
+    // 장식 원
+    c.save();
+    c.globalAlpha = 0.08;
+    c.fillStyle = type === "all_catch" ? "#c8a0ff" : type === "top10" ? "#ffd700" : "#6ee7ff";
+    c.beginPath(); c.arc(W * 0.2, H * 0.15, 300, 0, Math.PI * 2); c.fill();
+    c.beginPath(); c.arc(W * 0.8, H * 0.3, 200, 0, Math.PI * 2); c.fill();
+    c.restore();
+
+    // 로고 (상단)
+    const logoH = 100;
+    if (cardLogoImg.complete && cardLogoImg.naturalWidth > 0) {
+      const logoW = (cardLogoImg.naturalWidth / cardLogoImg.naturalHeight) * logoH;
+      c.drawImage(cardLogoImg, (W - logoW) / 2, 120, logoW, logoH);
+    }
+
+    // 게임 타이틀
+    c.fillStyle = "#eaf0ff";
+    c.font = "bold 52px ui-sans-serif, system-ui, sans-serif";
+    c.textAlign = "center";
+    c.fillText("TAPEMON GO!", W / 2, 310);
+    c.font = "28px ui-sans-serif, system-ui, sans-serif";
+    c.fillStyle = "#f4a9b8";
+    c.fillText("2016 REWIND PARTY", W / 2, 360);
+
+    // 메인 콘텐츠 영역
+    let yPos = 480;
+
+    if (type === "rare_catch") {
+      const targetDef = extra.targetDef;
+      const totalW = TARGET_DEFS.reduce((s, d) => s + d.weight, 0);
+      const pct = ((targetDef.weight / totalW) * 100).toFixed(1);
+
+      // 이모지 크게
+      c.font = "180px serif";
+      c.fillText(targetDef.emoji || "⬜", W / 2, yPos + 100);
+
+      // "나 _____ 잡았다!"
+      c.fillStyle = "#ffd700";
+      c.font = "bold 64px ui-sans-serif, system-ui, sans-serif";
+      yPos += 210;
+      c.fillText(`나 ${targetDef.name} 잡았다!`, W / 2, yPos);
+
+      // 확률
+      c.fillStyle = "#ff6b6b";
+      c.font = "bold 48px ui-sans-serif, system-ui, sans-serif";
+      yPos += 80;
+      c.fillText(`확률 ${pct}%`, W / 2, yPos);
+
+      // 레어 뱃지
+      c.fillStyle = "rgba(255,215,0,0.15)";
+      const badgeW = 260, badgeH = 70;
+      c.beginPath();
+      c.roundRect((W - badgeW) / 2, yPos + 30, badgeW, badgeH, 35);
+      c.fill();
+      c.fillStyle = "#ffd700";
+      c.font = "bold 36px ui-sans-serif, system-ui, sans-serif";
+      c.fillText("✨ RARE ✨", W / 2, yPos + 76);
+
+    } else if (type === "all_catch") {
+      // 모든 몬스터 이모지 나열
+      c.font = "100px serif";
+      const emojis = TARGET_DEFS.map(d => d.emoji).join(" ");
+      c.fillText(emojis, W / 2, yPos + 80);
+
+      c.fillStyle = "#c8a0ff";
+      c.font = "bold 60px ui-sans-serif, system-ui, sans-serif";
+      yPos += 180;
+      c.fillText("몬스터 전종 포획!", W / 2, yPos);
+
+      c.fillStyle = "#ffd700";
+      c.font = "bold 44px ui-sans-serif, system-ui, sans-serif";
+      yPos += 70;
+      c.fillText("COMPLETE!", W / 2, yPos);
+
+      // 박스에 수집 정보
+      c.fillStyle = "rgba(200,160,255,0.10)";
+      c.beginPath();
+      c.roundRect(100, yPos + 30, W - 200, 280, 30);
+      c.fill();
+      c.strokeStyle = "rgba(200,160,255,0.3)";
+      c.lineWidth = 2;
+      c.stroke();
+
+      c.fillStyle = "#eaf0ff";
+      c.font = "32px ui-sans-serif, system-ui, sans-serif";
+      let listY = yPos + 85;
+      for (const def of TARGET_DEFS) {
+        const rarityTag = def.rarity === "rare" ? " ⭐" : "";
+        c.fillText(`${def.emoji} ${def.name}${rarityTag}`, W / 2, listY);
+        listY += 48;
+      }
+
+    } else if (type === "top10") {
+      const rank = extra.rank || "?";
+
+      // 큰 순위
+      c.fillStyle = "#ffd700";
+      c.font = "bold 200px ui-sans-serif, system-ui, sans-serif";
+      c.fillText(`#${rank}`, W / 2, yPos + 140);
+
+      c.fillStyle = "#eaf0ff";
+      c.font = "bold 56px ui-sans-serif, system-ui, sans-serif";
+      yPos += 220;
+      c.fillText("TOP 10 진입!", W / 2, yPos);
+
+      // 스코어 박스
+      c.fillStyle = "rgba(255,215,0,0.10)";
+      c.beginPath();
+      c.roundRect(140, yPos + 30, W - 280, 240, 30);
+      c.fill();
+      c.strokeStyle = "rgba(255,215,0,0.3)";
+      c.lineWidth = 2;
+      c.stroke();
+
+      c.fillStyle = "#9fb0cc";
+      c.font = "30px ui-sans-serif, system-ui, sans-serif";
+      c.fillText(`Max Combo: ${extra.maxCombo || 0}`, W / 2, yPos + 90);
+      c.fillText(`수집: ${extra.monsters || 0}/${TARGET_DEFS.length}`, W / 2, yPos + 135);
+      c.fillText(`Score: ${extra.score || 0}`, W / 2, yPos + 180);
+
+      c.fillStyle = "#ffd700";
+      c.font = "bold 36px ui-sans-serif, system-ui, sans-serif";
+      c.fillText(`@${extra.playerName || ""}`, W / 2, yPos + 240);
+    }
+
+    // 하단: QR코드 + 게임 주소
+    const qrSize = 200;
+    const qrY = H - 380;
+    if (cardQrImg.complete && cardQrImg.naturalWidth > 0) {
+      // QR 배경
+      c.fillStyle = "rgba(255,255,255,0.05)";
+      c.beginPath();
+      c.roundRect((W - qrSize - 40) / 2, qrY - 20, qrSize + 40, qrSize + 100, 20);
+      c.fill();
+      c.drawImage(cardQrImg, (W - qrSize) / 2, qrY, qrSize, qrSize);
+    }
+
+    // 게임 주소
+    c.fillStyle = "#9fb0cc";
+    c.font = "28px ui-monospace, monospace";
+    c.textAlign = "center";
+    c.fillText(GAME_URL, W / 2, qrY + qrSize + 50);
+
+    // 맨 하단 크레딧
+    c.fillStyle = "rgba(159,176,204,0.5)";
+    c.font = "22px ui-sans-serif, system-ui, sans-serif";
+    c.fillText("TAPE SEOUL × TAPEMON GO!", W / 2, H - 60);
+
+    return offCv;
+  }
+
+  function downloadResultCard(canvas, filename) {
+    canvas.toBlob((blob) => {
+      if (!blob) return;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename || "tapemon_result.png";
+      a.click();
+      URL.revokeObjectURL(url);
+    }, "image/png");
+  }
+
+  function showResultCardModal(cardCanvas, title) {
+    // 기존 모달이 있으면 제거
+    let existing = $("resultCardModal");
+    if (existing) existing.remove();
+
+    const modal = document.createElement("div");
+    modal.id = "resultCardModal";
+    modal.className = "modal";
+    modal.setAttribute("role", "dialog");
+    modal.innerHTML = `
+      <div class="modal-card" style="max-width:400px;">
+        <div class="modal-title">${escapeHtml(title)}</div>
+        <div class="modal-body" style="text-align:center;">
+          <canvas id="resultCardPreview" style="width:100%;border-radius:12px;margin-top:10px;"></canvas>
+          <div style="margin-top:14px;display:flex;gap:10px;justify-content:center;">
+            <button id="btnDownloadCard" class="btn primary">📥 이미지 저장</button>
+            <button id="btnCloseCard" class="btn">닫기</button>
+          </div>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+
+    // 프리뷰 캔버스에 결과 카드 복사
+    const preview = $("resultCardPreview");
+    preview.width = cardCanvas.width;
+    preview.height = cardCanvas.height;
+    preview.getContext("2d").drawImage(cardCanvas, 0, 0);
+
+    $("btnDownloadCard").addEventListener("click", () => {
+      const ts = new Date().toISOString().slice(0, 10);
+      downloadResultCard(cardCanvas, `tapemon_${ts}.png`);
+    });
+    $("btnCloseCard").addEventListener("click", () => {
+      modal.remove();
+    });
+  }
+
+  // 레어 몬스터 포획 시 카드 생성
+  function triggerRareCatchCard(targetDef) {
+    const card = generateResultCard("rare_catch", { targetDef });
+    showResultCardModal(card, `🎉 ${targetDef.name} 포획!`);
+  }
+
+  // 전종 포획 시 카드 생성
+  function triggerAllCatchCard() {
+    const card = generateResultCard("all_catch");
+    showResultCardModal(card, "🏆 몬스터 전종 포획!");
+  }
+
+  // TOP 10 진입 시 카드 생성
+  function triggerTop10Card(rank, playerName) {
+    const card = generateResultCard("top10", {
+      rank,
+      maxCombo: state.maxCombo,
+      monsters: state.caughtSet.size,
+      score: state.score,
+      playerName,
+    });
+    showResultCardModal(card, `🏅 TOP 10 진입! (#${rank})`);
+  }
 
   // roundRect polyfill (older Safari)
   if (!CanvasRenderingContext2D.prototype.roundRect) {
