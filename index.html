@@ -102,7 +102,7 @@
 
   <!-- 관리자 모달 -->
   <div id="adminModal" class="modal hidden" role="dialog" aria-modal="true">
-    <div class="modal-card">
+    <div class="modal-card" style="max-width:600px;max-height:90vh;overflow-y:auto;">
       <div class="modal-title">관리자 메뉴</div>
       <div class="modal-body">
         <div class="admin-actions">
@@ -110,6 +110,21 @@
           <button id="btnAdminExport" class="btn admin-btn">누적 데이터 CSV 다운로드</button>
           <button id="btnAdminView" class="btn admin-btn">누적 데이터 조회</button>
         </div>
+
+        <!-- 난이도 설정 가이드 -->
+        <div style="margin-top:16px;padding:12px;border:1px solid rgba(255,255,255,0.08);border-radius:12px;background:rgba(255,255,255,0.03);">
+          <div style="font-weight:700;font-size:13px;margin-bottom:8px;">📋 난이도 설정 가이드 (main.js 수정)</div>
+          <div style="font-size:11px;color:var(--muted);line-height:1.6;">
+            COMBO_DIFFICULTY_SETTINGS에서 콤보별 설정 변경 가능:<br>
+            • <b>speed</b>: 이동 속도 (1단계=220 ~ 10단계=1030)<br>
+            • <b>hitRadius</b>: 히트박스 반경 (작을수록 어려움)<br>
+            • <b>suddenTurnChance</b>: 방향전환 확률 (0~1)<br>
+            • <b>irregularSpeedMax</b>: 불규칙 속도 최대 배율<br>
+            • <b>irregularEnabled</b>: 불규칙 속도 ON/OFF
+          </div>
+          <div id="adminDifficultyPreview" style="margin-top:8px;font-size:11px;font-family:monospace;color:#9fb0cc;max-height:200px;overflow-y:auto;"></div>
+        </div>
+
         <div id="adminDataWrap" class="admin-data-wrap hidden">
           <div id="adminDataTable" class="admin-data-table"></div>
         </div>
