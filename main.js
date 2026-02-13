@@ -14,7 +14,7 @@ import {
   const COUPON_COOLDOWN_MS = 3 * 60 * 60 * 1000; // 3시간
   const BASE_TARGET_HIT_RADIUS = 18; // 기본 히트박스 반경(px)
   const USE_TARGET_IMAGE = true;     // PNG 사용할지 여부
-  const BUILD_VERSION = "5콤보시 쿠폰 증정!"; // 배포 확인용 버전(코드 수정 시 올리기)
+  const BUILD_VERSION = "emoji-target-no-label-v2"; // 배포 확인용 버전(코드 수정 시 올리기)
   const GAME_URL = "https://tapemon-go.web.app";
   const COMBO_DIFFICULTY_SETTINGS = {
     combo0to1: { speedLevel: 4, hitRadius: 18, suddenTurnChance: 0.0, irregularEnabled: false, irregularSpeedMin: 1.0, irregularSpeedMax: 1.0, irregularIntervalMin: 1.4, irregularIntervalMax: 2.0 },
@@ -26,11 +26,11 @@ import {
 
   // ===== 타겟(몬스터) 정의 =====
   const TARGET_DEFS = [
-    { id: "target1", src: "target.png", name: "비어봇", emoji: "🤖", tier: "노멀", weight: 31 },
-    { id: "target2", src: "target2.png", name: "UFO 드링커", emoji: "👽", tier: "노멀", weight: 31 },
-    { id: "target3", src: "target3.png", name: "픽셀 취객", emoji: "👾", tier: "노멀", weight: 30 },
-    { id: "target4", src: "target4.png", name: "드렁큰 레인보우", emoji: "🦄", tier: "레어", weight: 5 },
-    { id: "target5", src: "target5.png", name: "스파이시 펌퀸", emoji: "🎃", tier: "레어", weight: 3 },
+    { id: "target1", src: "target.png", pngName: "피카츄", emojiName: "비어봇", emoji: "🤖", tier: "노멀", weight: 31 },
+    { id: "target2", src: "target2.png", pngName: "파이리", emojiName: "UFO 드링커", emoji: "👽", tier: "노멀", weight: 31 },
+    { id: "target3", src: "target3.png", pngName: "이상해씨", emojiName: "픽셀 취객", emoji: "👾", tier: "노멀", weight: 30 },
+    { id: "target4", src: "target4.png", pngName: "뮤츠", emojiName: "드렁큰 레인보우", emoji: "🦄", tier: "레어", weight: 5 },
+    { id: "target5", src: "target5.png", pngName: "뮤", emojiName: "스파이시 펌퀸", emoji: "🎃", tier: "레어", weight: 3 },
   ];
   const CATCH_COMBO_THRESHOLD = 3; // 이 콤보 달성 시 타겟 포획
 
@@ -583,12 +583,12 @@ import {
     if (state.combo % CATCH_COMBO_THRESHOLD !== 0) return;
 
     const caughtDef = currentTargetDef;
-    const name = caughtDef.name;
+    const name = targetDisplayName(caughtDef);
     state.caughtSet.add(name);
 
     if (isRareTarget(caughtDef)) {
       showResultCard("rare", {
-        targetName: `${caughtDef.emoji} ${caughtDef.name}`,
+        targetName: USE_TARGET_IMAGE ? targetDisplayName(caughtDef) : `${caughtDef.emoji || "👾"} ${targetDisplayName(caughtDef)}`,
         spawnPercent: rareSpawnPercent(caughtDef),
       });
     }
@@ -1113,13 +1113,15 @@ import {
       const h = target.drawH;
       ctx.drawImage(curImg, -w/2, -h/2, w, h);
     } else {
+      // 이모지는 배경 원(glow) 위, 히트박스 선 아래에만 표시 (이름 텍스트는 절대 미표시)
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.font = "42px sans-serif";
-      ctx.fillText(currentTargetDef.emoji || "👾", 0, -8);
-      ctx.font = "bold 13px sans-serif";
-      ctx.fillStyle = "rgba(234,240,255,0.95)";
-      ctx.fillText(currentTargetDef.name, 0, 26);
+      ctx.fillStyle = "rgba(255,255,255,0.98)";
+      ctx.shadowColor = "rgba(0,0,0,0.28)";
+      ctx.shadowBlur = 6;
+      ctx.font = "46px sans-serif";
+      ctx.fillText(currentTargetDef.emoji || "👾", 0, 0);
+      ctx.shadowBlur = 0;
       ctx.textAlign = "start";
       ctx.textBaseline = "alphabetic";
     }
@@ -1205,7 +1207,9 @@ import {
     } else {
       ctx.textAlign = "center";
       const isRare = isRareTarget(currentTargetDef);
-      let appearText = `야생의 ${currentTargetDef.emoji || "👾"} ${currentTargetDef.name}(${currentTargetDef.tier})(이)가 나타났다!`;
+      let appearText = USE_TARGET_IMAGE
+        ? `야생의 ${targetDisplayLabel(currentTargetDef)}가 나타났다!`
+        : `야생의 ${currentTargetDef.emoji || "👾"} ${targetDisplayLabel(currentTargetDef)}가 나타났다!`;
       if (isRare) {
         const totalW = TARGET_DEFS.reduce((s, d) => s + d.weight, 0);
         const pct = Math.round((currentTargetDef.weight / totalW) * 100);
