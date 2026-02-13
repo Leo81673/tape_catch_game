@@ -13,8 +13,8 @@ import {
   const DEFAULT_SENSITIVITY = 2;   // 내부 계산용(현재 고정)
   const COUPON_COOLDOWN_MS = 3 * 60 * 60 * 1000; // 3시간
   const BASE_TARGET_HIT_RADIUS = 18; // 기본 히트박스 반경(px)
-  const USE_TARGET_IMAGE = true;     // PNG 사용할지 여부
-  const BUILD_VERSION = "5콤보시 쿠폰 증정!2"; // 배포 확인용 버전(코드 수정 시 올리기)
+  const USE_TARGET_IMAGE = false;     // PNG 사용할지 여부
+  const BUILD_VERSION = "5콤보시 쿠폰 증정!"; // 배포 확인용 버전(코드 수정 시 올리기)
   const GAME_URL = "https://tapemon-go.web.app";
   const COMBO_DIFFICULTY_SETTINGS = {
     combo0to1: { speedLevel: 4, hitRadius: 18, suddenTurnChance: 0.0, irregularEnabled: false, irregularSpeedMin: 1.0, irregularSpeedMax: 1.0, irregularIntervalMin: 1.4, irregularIntervalMax: 2.0 },
@@ -75,7 +75,7 @@ import {
 
   // 🔴 여기 날짜를 게임 오픈일 00:00 (한국시간)으로 설정하세요
   // 예: 2026년 2월 12일 오픈이면 아래 그대로 사용
-  const RESET_ANCHOR_KST = "2026-02-12T00:00:00+09:00";
+  const RESET_ANCHOR_KST = "2026-02-14T21:00:00+09:00";
   
   function currentBucketId() {
     const anchor = new Date(RESET_ANCHOR_KST).getTime();
@@ -1195,7 +1195,7 @@ import {
     } else {
       ctx.textAlign = "center";
       const isRare = isRareTarget(currentTargetDef);
-      let appearText = `야생의 ${currentTargetDef.emoji || "👾"} ${currentTargetDef.name}(${currentTargetDef.tier})가 나타났다!`;
+      let appearText = `야생의 ${currentTargetDef.emoji || "👾"} ${currentTargetDef.name}(${currentTargetDef.tier})(이)가 나타났다!`;
       if (isRare) {
         const totalW = TARGET_DEFS.reduce((s, d) => s + d.weight, 0);
         const pct = Math.round((currentTargetDef.weight / totalW) * 100);
