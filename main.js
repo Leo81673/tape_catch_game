@@ -35,7 +35,7 @@ import {
   const CATCH_COMBO_THRESHOLD = 3; // 이 콤보 달성 시 타겟 포획
 
   // ===== 코인 시스템 설정 =====
-  const MAX_COINS = 3;              // 최대 코인 수
+  const MAX_COINS = 30;              // 최대 코인 수
   const COIN_RECHARGE_MS = 30 * 1000; // 코인 충전 시간 (30초)
 
   // ===== 위치 파악 설정 =====
