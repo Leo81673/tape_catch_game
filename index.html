@@ -22,6 +22,7 @@
         <div id="comboPill" class="pill">Combo: <span id="combo">0</span> / Max: <span id="maxCombo">0</span></div>
         <div class="pill">Best: <span id="best">0</span></div>
         <div class="pill catch-pill"><span id="catchCount">수집 0/5</span></div>
+        <div class="pill coin-pill">🪙 <span id="coinCount">3/3</span></div>
       </div>
     </header>
 
@@ -68,8 +69,30 @@
   </div>
 
 
-    
-  
+  <!-- 코인 소진 모달 -->
+  <div id="coinModal" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="modal-card">
+      <div class="modal-title">🪙 코인을 모두 사용했습니다!</div>
+      <div class="modal-body">
+        <div class="modal-line">1분 후 다시 도전하실 수 있습니다.</div>
+        <div class="coin-countdown-wrap">
+          <span>충전까지: </span><span id="coinCountdown" class="mono coin-countdown">60초</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 위치 차단 모달 -->
+  <div id="locationModal" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="modal-card">
+      <div class="modal-title">📍 위치 확인</div>
+      <div class="modal-body">
+        <div id="locationMsg" class="modal-line" style="white-space:pre-line;"></div>
+      </div>
+    </div>
+  </div>
+
+
   <script type="module" src="main.js"></script>
 
 </body>

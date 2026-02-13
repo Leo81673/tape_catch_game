@@ -32,6 +32,16 @@ import {
     { src: "target5.png", name: "뮤", weight: 3  },
   ];
   const CATCH_COMBO_THRESHOLD = 3; // 이 콤보 달성 시 타겟 포획
+
+  // ===== 코인 시스템 설정 =====
+  const MAX_COINS = 3;              // 최대 코인 수
+  const COIN_RECHARGE_MS = 60 * 1000; // 코인 충전 시간 (1분)
+
+  // ===== 위치 파악 설정 =====
+  const ENABLE_LOCATION_CHECK = false; // true: 위치 파악 켜기, false: 끄기
+  const TARGET_LAT = 37.5340;         // 서울특별시 용산구 이태원로 196 위도
+  const TARGET_LNG = 126.9948;        // 서울특별시 용산구 이태원로 196 경도
+  const LOCATION_RADIUS_M = 300;      // 허용 반경 (미터)
   // =============================
 
   const firebaseConfig = {
@@ -160,10 +170,24 @@ import {
 
     // catch collection
     caughtSet: new Set(), // 잡은 타겟 이름들
+
+    // 코인 시스템
+    coins: MAX_COINS,
+    coinRechargeAt: 0, // 코인 충전 완료 시각 (Date.now() 기준)
+    coinDepleted: false, // 코인 소진 상태
+
+    // 위치 확인
+    locationVerified: false, // 위치 확인 완료 여부
   };
 
   // 포획 메시지
   const catchMsg = {
+    text: "",
+    until: 0,
+  };
+
+  // 맥스 콤보 알림 메시지
+  const maxComboMsg = {
     text: "",
     until: 0,
   };
@@ -301,6 +325,10 @@ import {
       pill.classList.add("combo-pop");
     }
     prevComboForAnim = state.combo;
+
+    // 코인 UI
+    const coinEl = $("coinCount");
+    if (coinEl) coinEl.textContent = `${state.coins}/${MAX_COINS}`;
   }
 
   function loadLocal() {
@@ -499,6 +527,86 @@ import {
     beep(1200, 0.07, 0.08);
   }
 
+  // ===== 코인 소진 모달 =====
+  function showCoinDepletedModal() {
+    $("coinModal").classList.remove("hidden");
+    startCoinCountdown();
+  }
+  function hideCoinDepletedModal() {
+    $("coinModal").classList.add("hidden");
+  }
+
+  let coinCountdownInterval = null;
+  function startCoinCountdown() {
+    const countdownEl = $("coinCountdown");
+    if (coinCountdownInterval) clearInterval(coinCountdownInterval);
+
+    coinCountdownInterval = setInterval(() => {
+      const remaining = Math.max(0, state.coinRechargeAt - Date.now());
+      if (remaining <= 0) {
+        clearInterval(coinCountdownInterval);
+        coinCountdownInterval = null;
+        // 코인 충전 완료
+        state.coins = MAX_COINS;
+        state.coinDepleted = false;
+        hideCoinDepletedModal();
+        state.running = true;
+        syncUI();
+        return;
+      }
+      const sec = Math.ceil(remaining / 1000);
+      countdownEl.textContent = `${sec}초`;
+    }, 200);
+  }
+
+  // ===== 위치 파악 =====
+  function haversineDistance(lat1, lng1, lat2, lng2) {
+    const R = 6371000; // 지구 반경 (미터)
+    const toRad = (d) => d * Math.PI / 180;
+    const dLat = toRad(lat2 - lat1);
+    const dLng = toRad(lng2 - lng1);
+    const a = Math.sin(dLat / 2) ** 2 +
+              Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  }
+
+  function checkLocation() {
+    return new Promise((resolve) => {
+      if (!ENABLE_LOCATION_CHECK) {
+        resolve(true);
+        return;
+      }
+
+      if (!navigator.geolocation) {
+        showLocationBlockedModal("위치 정보를 지원하지 않는 브라우저입니다.");
+        resolve(false);
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const dist = haversineDistance(pos.coords.latitude, pos.coords.longitude, TARGET_LAT, TARGET_LNG);
+          if (dist <= LOCATION_RADIUS_M) {
+            resolve(true);
+          } else {
+            showLocationBlockedModal("TAPE에서만 플레이 할 수 있습니다.");
+            resolve(false);
+          }
+        },
+        (err) => {
+          showLocationBlockedModal("위치 정보를 공유해주셔야 플레이가 가능합니다.\n새로고침 후 위치 정보 공유를 허용해주세요.");
+          resolve(false);
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      );
+    });
+  }
+
+  function showLocationBlockedModal(msg) {
+    $("locationMsg").textContent = msg;
+    $("locationModal").classList.remove("hidden");
+  }
+
   // Gameplay
   function startGame() {
     state.running = true;
@@ -648,6 +756,15 @@ import {
       showJudgeFeedback(label);
       beep(220, 0.08, 0.06);
 
+      // 코인 차감
+      state.coins = Math.max(0, state.coins - 1);
+      if (state.coins <= 0) {
+        state.coinDepleted = true;
+        state.running = false;
+        state.coinRechargeAt = Date.now() + COIN_RECHARGE_MS;
+        showCoinDepletedModal();
+      }
+
       // miss 시 타겟 변경
       const newDef = pickRandomTarget(currentTargetDef.src);
       currentTargetDef = newDef;
@@ -658,7 +775,12 @@ import {
 
     // 콤보를 먼저 증가시킨 후 피드백 표시 (숫자 일치)
     state.combo += 1;
-    if (state.combo > state.maxCombo) state.maxCombo = state.combo;
+    if (state.combo > state.maxCombo) {
+      state.maxCombo = state.combo;
+      // 맥스 콤보 갱신 알림 (게임 플레이에 지장 없도록 캔버스 위에 표시)
+      maxComboMsg.text = "MAX COMBO 달성! ID를 남겨주세요.";
+      maxComboMsg.until = performance.now() + 2500;
+    }
     showJudgeFeedback(label);
 
     const comboMul = 1 + Math.min(0.6, state.combo * 0.06);
@@ -993,6 +1115,19 @@ import {
       ctx.restore();
     }
 
+    // 맥스 콤보 알림 (하단에 표시하여 게임플레이에 지장 없도록)
+    if (maxComboMsg.text && performance.now() < maxComboMsg.until) {
+      const remain = clamp((maxComboMsg.until - performance.now()) / 2500, 0, 1);
+      ctx.save();
+      ctx.globalAlpha = 0.3 + remain * 0.7;
+      ctx.fillStyle = "rgba(255,215,0,0.95)";
+      ctx.font = "bold 16px ui-sans-serif, system-ui, -apple-system, Apple SD Gothic Neo, Noto Sans KR, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText(maxComboMsg.text, world.w * 0.5, world.h * 0.58);
+      ctx.textAlign = "start";
+      ctx.restore();
+    }
+
     if (feedback.text && performance.now() < feedback.until) {
       const remain = clamp((feedback.until - performance.now()) / 820, 0, 1);
       ctx.globalAlpha = 0.35 + remain * 0.65;
@@ -1184,12 +1319,22 @@ import {
     };
   }
 
-  function init() {
+  async function init() {
     resize();
     loadLocal();
     syncUI();
     syncCatchUI();
     listenTop10();   // 🔥 서버 리더보드
+
+    // 위치 파악
+    const locationOk = await checkLocation();
+    if (!locationOk) {
+      // 위치 불허 시 게임 시작하지 않음 (렌더링만 진행)
+      requestAnimationFrame(tick);
+      return;
+    }
+
+    state.locationVerified = true;
     startGame();
     requestAnimationFrame(tick);
   }
