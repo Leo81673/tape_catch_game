@@ -13,7 +13,7 @@ import {
   const DEFAULT_SENSITIVITY = 2;   // 내부 계산용(현재 고정)
   const COUPON_COOLDOWN_MS = 3 * 60 * 60 * 1000; // 3시간
   const BASE_TARGET_HIT_RADIUS = 18; // 기본 히트박스 반경(px)
-  const USE_TARGET_IMAGE = false;     // PNG 사용할지 여부
+  const USE_TARGET_IMAGE = true;     // PNG 사용할지 여부
   const BUILD_VERSION = "5콤보시 쿠폰 증정!"; // 배포 확인용 버전(코드 수정 시 올리기)
   const GAME_URL = "https://tapemon-go.web.app";
   const COMBO_DIFFICULTY_SETTINGS = {
