@@ -43,7 +43,7 @@ import {
   const TARGET_LAT = 37.5344;         // 서울특별시 용산구 이태원로 위도
   const TARGET_LNG = 126.9954;        // 서울특별시 용산구 이태원로 경도
   const LOCATION_RADIUS_M = 300;      // 허용 반경 (미터)
-  const ADMIN_PASSWORD = "tape2016";  // 관리자 비밀번호
+  const ADMIN_PASSWORD = "tape2016@@";  // 관리자 비밀번호
   // =============================
 
   const firebaseConfig = {
