@@ -1,7 +1,8 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js";
 import {
   getFirestore, collection, addDoc, serverTimestamp,
-  query, where, onSnapshot, getDocs
+  query, where, onSnapshot, getDocs,
+  doc, getDoc, setDoc, updateDoc
 } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js";
 
 (() => {
@@ -42,6 +43,7 @@ import {
   const TARGET_LAT = 37.5344;         // 서울특별시 용산구 이태원로 위도
   const TARGET_LNG = 126.9954;        // 서울특별시 용산구 이태원로 경도
   const LOCATION_RADIUS_M = 300;      // 허용 반경 (미터)
+  const ADMIN_PASSWORD = "tape2016";  // 관리자 비밀번호
   // =============================
 
   const firebaseConfig = {
@@ -56,6 +58,8 @@ import {
 
   let db = null;
   let firebaseReady = false;
+  let leaderboardResetCount = 0;
+  let unsubTop10 = null;
   try {
     const app = initializeApp(firebaseConfig);
     db = getFirestore(app);
@@ -76,8 +80,10 @@ import {
   function currentBucketId() {
     const anchor = new Date(RESET_ANCHOR_KST).getTime();
     const now = Date.now();
-    return Math.floor((now - anchor) / BUCKET_MS);
-}
+    const baseBucket = Math.floor((now - anchor) / BUCKET_MS);
+    if (leaderboardResetCount === 0) return baseBucket;
+    return `${baseBucket}_r${leaderboardResetCount}`;
+  }
 
 
 
@@ -1082,8 +1088,15 @@ import {
     if (state.holding) {
       ctx.fillText(`CHARGE ${Math.round(state.chargePower * 100)}%`, 18, 28);
     } else {
-      ctx.textAlign = "center"
-      ctx.fillText(`야생의 ${currentTargetDef.name}가 나타났다!`, world.w * 0.5, 28);
+      ctx.textAlign = "center";
+      const isRare = currentTargetDef.src === "target4.png" || currentTargetDef.src === "target5.png";
+      let appearText = `야생의 ${currentTargetDef.name}가 나타났다!`;
+      if (isRare) {
+        const totalW = TARGET_DEFS.reduce((s, d) => s + d.weight, 0);
+        const pct = Math.round((currentTargetDef.weight / totalW) * 100);
+        appearText += ` (확률 : ${pct}%)`;
+      }
+      ctx.fillText(appearText, world.w * 0.5, 28);
       ctx.fillText(BUILD_VERSION, world.w * 0.5, 50);
       ctx.textAlign = "start";
     }
@@ -1120,7 +1133,7 @@ import {
       const remain = clamp((maxComboMsg.until - performance.now()) / 2500, 0, 1);
       ctx.save();
       ctx.globalAlpha = 0.3 + remain * 0.7;
-      ctx.fillStyle = "rgba(255,215,0,0.95)";
+      ctx.fillStyle = "rgba(190,200,215,0.75)";
       ctx.font = "bold 16px ui-sans-serif, system-ui, -apple-system, Apple SD Gothic Neo, Noto Sans KR, sans-serif";
       ctx.textAlign = "center";
       ctx.fillText(maxComboMsg.text, world.w * 0.5, world.h * 0.58);
@@ -1228,8 +1241,7 @@ import {
     hideCouponModal();
   });
 
-  $("btnSubmit").addEventListener("click", async () => {
-    const name = ($("nickname").value || "").trim().slice(0, 15);
+  async function submitScore(name) {
     if (!name) {
       alert("인스타그램 ID를 입력해주세요.");
       return;
@@ -1262,7 +1274,7 @@ import {
       );
 
       const allScores = [];
-      bucketSnap.forEach((doc) => allScores.push(doc.data()));
+      bucketSnap.forEach((d) => allScores.push(d.data()));
       allScores.sort((a, b) => {
         const byCombo = (Number(b.maxCombo) || 0) - (Number(a.maxCombo) || 0);
         if (byCombo !== 0) return byCombo;
@@ -1291,6 +1303,16 @@ import {
         alert(`점수 등록에 실패했어요. (${code || err?.message || "알 수 없는 오류"})`);
       }
     }
+  }
+
+  $("btnSubmit").addEventListener("click", () => {
+    const name = ($("nickname").value || "").trim().slice(0, 15);
+    submitScore(name);
+  });
+
+  $("btnCoinSubmit").addEventListener("click", () => {
+    const name = ($("coinNickname").value || "").trim().slice(0, 15);
+    submitScore(name);
   });
 
   function getClientId() {
@@ -1303,6 +1325,126 @@ import {
   }
 
 
+
+  // ===== 관리자 기능 =====
+  function listenConfig() {
+    if (!firebaseReady || !db) return;
+    const configRef = doc(db, "config", "leaderboard");
+    onSnapshot(configRef, (snap) => {
+      if (snap.exists()) {
+        const data = snap.data();
+        const newCount = data.resetCount || 0;
+        if (newCount !== leaderboardResetCount) {
+          leaderboardResetCount = newCount;
+          if (unsubTop10) unsubTop10();
+          unsubTop10 = listenTop10();
+        }
+      }
+    }, () => {});
+  }
+
+  let adminClickCount = 0;
+  let adminClickTimer = null;
+  $("lbTitle").addEventListener("click", () => {
+    adminClickCount++;
+    if (adminClickTimer) clearTimeout(adminClickTimer);
+    adminClickTimer = setTimeout(() => { adminClickCount = 0; }, 2000);
+    if (adminClickCount >= 5) {
+      adminClickCount = 0;
+      const pw = prompt("관리자 비밀번호를 입력하세요:");
+      if (pw === ADMIN_PASSWORD) {
+        $("adminModal").classList.remove("hidden");
+      } else if (pw !== null) {
+        alert("비밀번호가 올바르지 않습니다.");
+      }
+    }
+  });
+
+  $("btnAdminClose").addEventListener("click", () => {
+    $("adminModal").classList.add("hidden");
+    $("adminDataWrap").classList.add("hidden");
+  });
+
+  $("btnAdminReset").addEventListener("click", async () => {
+    if (!confirm("정말 리더보드를 초기화하시겠습니까?\n(누적 데이터는 유지됩니다)")) return;
+    if (!firebaseReady || !db) { alert("Firebase 연결 실패"); return; }
+    try {
+      const configRef = doc(db, "config", "leaderboard");
+      const snap = await getDoc(configRef);
+      const current = snap.exists() ? (snap.data().resetCount || 0) : 0;
+      await setDoc(configRef, { resetCount: current + 1 }, { merge: true });
+      alert("리더보드가 초기화되었습니다.");
+    } catch (err) {
+      console.error("[Admin] 리더보드 초기화 실패", err);
+      alert("초기화 실패: " + (err?.message || "알 수 없는 오류"));
+    }
+  });
+
+  $("btnAdminExport").addEventListener("click", async () => {
+    if (!firebaseReady || !db) { alert("Firebase 연결 실패"); return; }
+    try {
+      const snap = await getDocs(collection(db, "scores"));
+      const rows = [];
+      snap.forEach((d) => rows.push(d.data()));
+      rows.sort((a, b) => {
+        const at = a.createdAt?.seconds || 0;
+        const bt = b.createdAt?.seconds || 0;
+        return bt - at;
+      });
+
+      let csv = "\uFEFF날짜,아이디,수집,점수,콤보,버킷ID\n";
+      for (const r of rows) {
+        const ts = r.createdAt?.seconds ? new Date(r.createdAt.seconds * 1000) : null;
+        const dateStr = ts ? `${ts.getFullYear()}-${String(ts.getMonth()+1).padStart(2,"0")}-${String(ts.getDate()).padStart(2,"0")} ${String(ts.getHours()).padStart(2,"0")}:${String(ts.getMinutes()).padStart(2,"0")}` : "-";
+        csv += `${dateStr},${(r.name||"").replace(/,/g," ")},${r.monsters||0},${r.score||0},${r.maxCombo||0},${r.bucketId??"?"}\n`;
+      }
+
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `tapemon_cumulative_${new Date().toISOString().slice(0,10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("[Admin] CSV 다운로드 실패", err);
+      alert("데이터 다운로드 실패: " + (err?.message || "알 수 없는 오류"));
+    }
+  });
+
+  $("btnAdminView").addEventListener("click", async () => {
+    if (!firebaseReady || !db) { alert("Firebase 연결 실패"); return; }
+    const wrap = $("adminDataWrap");
+    const table = $("adminDataTable");
+    wrap.classList.remove("hidden");
+    table.innerHTML = `<div class="adm-row adm-header"><span>날짜</span><span>아이디</span><span>수집</span><span>점수</span><span>콤보</span></div>`;
+
+    try {
+      const snap = await getDocs(collection(db, "scores"));
+      const rows = [];
+      snap.forEach((d) => rows.push(d.data()));
+      rows.sort((a, b) => {
+        const at = a.createdAt?.seconds || 0;
+        const bt = b.createdAt?.seconds || 0;
+        return bt - at;
+      });
+
+      if (rows.length === 0) {
+        table.innerHTML += `<div class="adm-row"><span colspan="5">데이터 없음</span></div>`;
+        return;
+      }
+
+      for (const r of rows) {
+        const ts = r.createdAt?.seconds ? new Date(r.createdAt.seconds * 1000) : null;
+        const dateStr = ts ? `${String(ts.getMonth()+1).padStart(2,"0")}/${String(ts.getDate()).padStart(2,"0")} ${String(ts.getHours()).padStart(2,"0")}:${String(ts.getMinutes()).padStart(2,"0")}` : "-";
+        const safeName = escapeHtml((r.name || "NONAME").slice(0, 15));
+        table.innerHTML += `<div class="adm-row"><span>${dateStr}</span><span>${safeName}</span><span style="text-align:center">${r.monsters||0}</span><span style="text-align:center">${r.score||0}</span><span style="text-align:center">${r.maxCombo||0}</span></div>`;
+      }
+    } catch (err) {
+      console.error("[Admin] 데이터 조회 실패", err);
+      table.innerHTML += `<div class="adm-row"><span>조회 실패: ${escapeHtml(err?.message || "")}</span></div>`;
+    }
+  });
 
   // roundRect polyfill (older Safari)
   if (!CanvasRenderingContext2D.prototype.roundRect) {
@@ -1324,7 +1466,8 @@ import {
     loadLocal();
     syncUI();
     syncCatchUI();
-    listenTop10();   // 🔥 서버 리더보드
+    listenConfig();  // 관리자 리셋 감지
+    unsubTop10 = listenTop10();   // 🔥 서버 리더보드
 
     // 위치 파악
     const locationOk = await checkLocation();

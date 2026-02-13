@@ -39,7 +39,7 @@
 
       <section class="panel">
         <div class="details">
-          <div class="lb-title">TOP 10 USER</div>
+          <div class="lb-title" id="lbTitle">TOP 10 USER</div>
           <div class="lb">
             <div class="panel-row">
               <input id="nickname" class="input" maxlength="15" placeholder="인스타그램 ID" />
@@ -78,6 +78,13 @@
         <div class="coin-countdown-wrap">
           <span>충전까지: </span><span id="coinCountdown" class="mono coin-countdown">60초</span>
         </div>
+        <div class="coin-submit-wrap">
+          <div class="modal-line" style="margin-top:14px;">기다리는 동안 ID를 남겨보세요!</div>
+          <div class="panel-row" style="margin-top:8px;">
+            <input id="coinNickname" class="input" maxlength="15" placeholder="인스타그램 ID" />
+            <button id="btnCoinSubmit" class="btn primary">점수 등록</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -92,6 +99,26 @@
     </div>
   </div>
 
+
+  <!-- 관리자 모달 -->
+  <div id="adminModal" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="modal-card">
+      <div class="modal-title">관리자 메뉴</div>
+      <div class="modal-body">
+        <div class="admin-actions">
+          <button id="btnAdminReset" class="btn admin-btn">리더보드 초기화</button>
+          <button id="btnAdminExport" class="btn admin-btn">누적 데이터 CSV 다운로드</button>
+          <button id="btnAdminView" class="btn admin-btn">누적 데이터 조회</button>
+        </div>
+        <div id="adminDataWrap" class="admin-data-wrap hidden">
+          <div id="adminDataTable" class="admin-data-table"></div>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button id="btnAdminClose" class="btn primary">닫기</button>
+      </div>
+    </div>
+  </div>
 
   <script type="module" src="main.js"></script>
 
