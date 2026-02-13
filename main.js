@@ -13,8 +13,8 @@ import {
   const DEFAULT_SENSITIVITY = 2;   // 내부 계산용(현재 고정)
   const COUPON_COOLDOWN_MS = 3 * 60 * 60 * 1000; // 3시간
   const BASE_TARGET_HIT_RADIUS = 18; // 기본 히트박스 반경(px)
-  const USE_TARGET_IMAGE = true;     // PNG 사용할지 여부
-  const BUILD_VERSION = "5콤보시 쿠폰 증정!2"; // 배포 확인용 버전(코드 수정 시 올리기)
+  const USE_TARGET_IMAGE = false;     // PNG 사용할지 여부
+  const BUILD_VERSION = "5콤보시 쿠폰 증정!"; // 배포 확인용 버전(코드 수정 시 올리기)
   const GAME_URL = "https://tapemon-go.web.app";
   const COMBO_DIFFICULTY_SETTINGS = {
     combo0to1: { speedLevel: 4, hitRadius: 18, suddenTurnChance: 0.0, irregularEnabled: false, irregularSpeedMin: 1.0, irregularSpeedMax: 1.0, irregularIntervalMin: 1.4, irregularIntervalMax: 2.0 },
@@ -26,11 +26,11 @@ import {
 
   // ===== 타겟(몬스터) 정의 =====
   const TARGET_DEFS = [
-    { id: "target1", src: "target.png", pngName: "피카츄", emojiName: "비어봇", emoji: "🤖", tier: "노멀", weight: 31 },
-    { id: "target2", src: "target2.png", pngName: "파이리", emojiName: "UFO 드링커", emoji: "👽", tier: "노멀", weight: 31 },
-    { id: "target3", src: "target3.png", pngName: "이상해씨", emojiName: "픽셀 취객", emoji: "👾", tier: "노멀", weight: 30 },
-    { id: "target4", src: "target4.png", pngName: "뮤츠", emojiName: "드렁큰 레인보우", emoji: "🦄", tier: "레어", weight: 5 },
-    { id: "target5", src: "target5.png", pngName: "뮤", emojiName: "스파이시 펌퀸", emoji: "🎃", tier: "레어", weight: 3 },
+    { id: "target1", src: "target.png", name: "비어봇", emoji: "🤖", tier: "노멀", weight: 31 },
+    { id: "target2", src: "target2.png", name: "UFO 드링커", emoji: "👽", tier: "노멀", weight: 31 },
+    { id: "target3", src: "target3.png", name: "픽셀 취객", emoji: "👾", tier: "노멀", weight: 30 },
+    { id: "target4", src: "target4.png", name: "드렁큰 레인보우", emoji: "🦄", tier: "레어", weight: 5 },
+    { id: "target5", src: "target5.png", name: "스파이시 펌퀸", emoji: "🎃", tier: "레어", weight: 3 },
   ];
   const CATCH_COMBO_THRESHOLD = 3; // 이 콤보 달성 시 타겟 포획
 
@@ -75,7 +75,7 @@ import {
 
   // 🔴 여기 날짜를 게임 오픈일 00:00 (한국시간)으로 설정하세요
   // 예: 2026년 2월 12일 오픈이면 아래 그대로 사용
-  const RESET_ANCHOR_KST = "2026-02-12T00:00:00+09:00";
+  const RESET_ANCHOR_KST = "2026-02-14T21:00:00+09:00";
   
   function currentBucketId() {
     const anchor = new Date(RESET_ANCHOR_KST).getTime();
@@ -583,12 +583,12 @@ import {
     if (state.combo % CATCH_COMBO_THRESHOLD !== 0) return;
 
     const caughtDef = currentTargetDef;
-    const name = targetDisplayName(caughtDef);
+    const name = caughtDef.name;
     state.caughtSet.add(name);
 
     if (isRareTarget(caughtDef)) {
       showResultCard("rare", {
-        targetName: USE_TARGET_IMAGE ? targetDisplayName(caughtDef) : `${caughtDef.emoji || "👾"} ${targetDisplayName(caughtDef)}`,
+        targetName: `${caughtDef.emoji} ${caughtDef.name}`,
         spawnPercent: rareSpawnPercent(caughtDef),
       });
     }
@@ -1119,7 +1119,7 @@ import {
       ctx.fillText(currentTargetDef.emoji || "👾", 0, -8);
       ctx.font = "bold 13px sans-serif";
       ctx.fillStyle = "rgba(234,240,255,0.95)";
-      ctx.fillText(targetDisplayName(currentTargetDef), 0, 26);
+      ctx.fillText(currentTargetDef.name, 0, 26);
       ctx.textAlign = "start";
       ctx.textBaseline = "alphabetic";
     }
@@ -1205,9 +1205,7 @@ import {
     } else {
       ctx.textAlign = "center";
       const isRare = isRareTarget(currentTargetDef);
-      let appearText = USE_TARGET_IMAGE
-        ? `야생의 ${targetDisplayLabel(currentTargetDef)}가 나타났다!`
-        : `야생의 ${currentTargetDef.emoji || "👾"} ${targetDisplayLabel(currentTargetDef)}가 나타났다!`;
+      let appearText = `야생의 ${currentTargetDef.emoji || "👾"} ${currentTargetDef.name}(${currentTargetDef.tier})(이)가 나타났다!`;
       if (isRare) {
         const totalW = TARGET_DEFS.reduce((s, d) => s + d.weight, 0);
         const pct = Math.round((currentTargetDef.weight / totalW) * 100);
