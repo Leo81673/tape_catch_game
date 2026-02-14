@@ -684,12 +684,19 @@ import {
       c.stroke();
       c.restore();
 
-      // 타겟 이미지 (중앙 크게)
-      if (payload.targetSrc) {
+      // 타겟 이미지 (중앙 크게) — 이모지 모드면 이모지 표시
+      if (USE_TARGET_IMAGE && payload.targetSrc) {
         const imgSize = 380;
         const imgX = W / 2 - imgSize / 2;
         const imgY = 400;
         await drawImageOnCard(c, payload.targetSrc, imgX, imgY, imgSize, imgSize);
+      } else if (payload.targetEmoji) {
+        c.save();
+        c.textAlign = "center";
+        c.textBaseline = "middle";
+        c.font = "280px sans-serif";
+        c.fillText(payload.targetEmoji, W / 2, 630);
+        c.restore();
       }
 
       // 이름
@@ -759,8 +766,17 @@ import {
         c.stroke();
         c.restore();
 
-        // 몬스터 이미지
-        await drawImageOnCard(c, def.src, cx + 15, cy + 10, cardSize - 30, cardSize - 30);
+        // 몬스터 이미지 — 이모지 모드면 이모지 표시
+        if (USE_TARGET_IMAGE) {
+          await drawImageOnCard(c, def.src, cx + 15, cy + 10, cardSize - 30, cardSize - 30);
+        } else {
+          c.save();
+          c.textAlign = "center";
+          c.textBaseline = "middle";
+          c.font = `${cardSize - 50}px sans-serif`;
+          c.fillText(def.emoji || "👾", cx + cardSize / 2, cy + cardSize / 2);
+          c.restore();
+        }
 
         // 이름
         c.textAlign = "center";
@@ -944,7 +960,7 @@ import {
 
     if (isRareTarget(caughtDef)) {
       showResultCard("rare", {
-        targetName: USE_TARGET_IMAGE ? targetDisplayName(caughtDef) : `${caughtDef.emoji || "👾"} ${targetDisplayName(caughtDef)}`,
+        targetName: targetDisplayName(caughtDef),
         spawnPercent: rareSpawnPercent(caughtDef),
         targetSrc: caughtDef.src,
         targetTier: caughtDef.tier,
