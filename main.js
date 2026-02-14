@@ -19,7 +19,7 @@ import {
   const COMBO_DIFFICULTY_SETTINGS = {
     combo0to1: { speedLevel: 4, hitRadius: 18, suddenTurnChance: 0.0, irregularEnabled: false, irregularSpeedMin: 1.0, irregularSpeedMax: 1.0, irregularIntervalMin: 1.4, irregularIntervalMax: 2.0 },
     combo2: { speedLevel: 5, hitRadius: 18, suddenTurnChance: 0.01, irregularEnabled: true, irregularSpeedMin: 0.8, irregularSpeedMax: 1.05, irregularIntervalMin: 1.1, irregularIntervalMax: 1.7 },
-    combo3: { speedLevel: 5, hitRadius: 16, suddenTurnChance: 0.01, irregularEnabled: true, irregularSpeedMin: 0.75, irregularSpeedMax: 1.05, irregularIntervalMin: 1.1, irregularIntervalMax: 1.7 },
+    combo3: { speedLevel: 5, hitRadius: 18, suddenTurnChance: 0.01, irregularEnabled: true, irregularSpeedMin: 0.78, irregularSpeedMax: 1.05, irregularIntervalMin: 1.1, irregularIntervalMax: 1.7 },
     combo4: { speedLevel: 5, hitRadius: 14, suddenTurnChance: 0.01, irregularEnabled: true, irregularSpeedMin: 0.7, irregularSpeedMax: 1.05, irregularIntervalMin: 1.1, irregularIntervalMax: 1.7 },
     combo5Plus: { speedLevel: 5, hitRadius: 13, suddenTurnChance: 0.01, irregularEnabled: true, irregularSpeedMin: 0.7, irregularSpeedMax: 1.05, irregularIntervalMin: 1.1, irregularIntervalMax: 1.7 },
   };
