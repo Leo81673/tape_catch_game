@@ -330,6 +330,16 @@ import {
     return ["TAPEMON GO!", "오늘도 몬스터 GET!"];
   }
 
+  function cardModalTitle(kind, payload = {}) {
+    if (kind === "rare") {
+      const lvl = payload.rareLevel || 1;
+      return lvl === 2 ? "⭐ ULTRA RARE 포획!" : "✨ RARE 포획!";
+    }
+    if (kind === "all-caught") return "🏆 전체 포획 완료!";
+    if (kind === "top10") return `🏅 TOP ${payload.rank} 달성!`;
+    return "결과 카드";
+  }
+
   // 콤보 기반 속도 보정
   let irregularTimer = 0;
   let irregularNextInterval = 1.2;
@@ -537,43 +547,358 @@ import {
     return `${y}-${mo}-${d} ${hh}:${mm}`;
   }
 
+  // ===== 카드 데코 헬퍼 함수 =====
+  function drawCardStar(c, cx, cy, r, points, color, alpha) {
+    c.save();
+    c.globalAlpha = alpha;
+    c.fillStyle = color;
+    c.beginPath();
+    for (let i = 0; i < points * 2; i++) {
+      const a = (Math.PI * i) / points - Math.PI / 2;
+      const rad = i % 2 === 0 ? r : r * 0.4;
+      const x = cx + Math.cos(a) * rad;
+      const y = cy + Math.sin(a) * rad;
+      i === 0 ? c.moveTo(x, y) : c.lineTo(x, y);
+    }
+    c.closePath();
+    c.fill();
+    c.restore();
+  }
+
+  function drawCardSparkles(c, seed, count, xMin, xMax, yMin, yMax, colors) {
+    let rng = seed;
+    const next = () => { rng = (rng * 16807 + 0) % 2147483647; return rng / 2147483647; };
+    for (let i = 0; i < count; i++) {
+      const x = xMin + next() * (xMax - xMin);
+      const y = yMin + next() * (yMax - yMin);
+      const size = 6 + next() * 18;
+      const color = colors[Math.floor(next() * colors.length)];
+      const alpha = 0.3 + next() * 0.7;
+      const pts = next() > 0.5 ? 4 : 5;
+      drawCardStar(c, x, y, size, pts, color, alpha);
+    }
+  }
+
+  function drawRoundRect(c, x, y, w, h, r) {
+    c.beginPath();
+    c.moveTo(x + r, y);
+    c.lineTo(x + w - r, y);
+    c.quadraticCurveTo(x + w, y, x + w, y + r);
+    c.lineTo(x + w, y + h - r);
+    c.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    c.lineTo(x + r, y + h);
+    c.quadraticCurveTo(x, y + h, x, y + h - r);
+    c.lineTo(x, y + r);
+    c.quadraticCurveTo(x, y, x + r, y);
+    c.closePath();
+  }
+
+  function drawGlowCircle(c, cx, cy, r, color, alpha) {
+    const grad = c.createRadialGradient(cx, cy, 0, cx, cy, r);
+    grad.addColorStop(0, color);
+    grad.addColorStop(1, "transparent");
+    c.save();
+    c.globalAlpha = alpha;
+    c.fillStyle = grad;
+    c.fillRect(cx - r, cy - r, r * 2, r * 2);
+    c.restore();
+  }
+
   async function makeResultCard(kind, payload = {}) {
+    const W = 1080, H = 1920;
     const cardCanvas = document.createElement("canvas");
-    cardCanvas.width = 1080;
-    cardCanvas.height = 1920;
+    cardCanvas.width = W;
+    cardCanvas.height = H;
     const c = cardCanvas.getContext("2d");
 
-    const bg = c.createLinearGradient(0, 0, 1080, 1920);
-    bg.addColorStop(0, "#1b1030");
-    bg.addColorStop(1, "#10081f");
+    // --- 공통: 배경 그라디언트 (카드 종류별 색상) ---
+    const bg = c.createLinearGradient(0, 0, W, H);
+    if (kind === "rare") {
+      const lvl = payload.rareLevel || 1;
+      if (lvl === 2) {
+        bg.addColorStop(0, "#1a0a2e"); bg.addColorStop(0.4, "#2d1055"); bg.addColorStop(1, "#0f0520");
+      } else {
+        bg.addColorStop(0, "#1a1000"); bg.addColorStop(0.4, "#2a1800"); bg.addColorStop(1, "#100a00");
+      }
+    } else if (kind === "all-caught") {
+      bg.addColorStop(0, "#0a1628"); bg.addColorStop(0.5, "#0d2040"); bg.addColorStop(1, "#061020");
+    } else if (kind === "top10") {
+      bg.addColorStop(0, "#1a0a00"); bg.addColorStop(0.5, "#2a1500"); bg.addColorStop(1, "#100800");
+    } else {
+      bg.addColorStop(0, "#1b1030"); bg.addColorStop(1, "#10081f");
+    }
     c.fillStyle = bg;
-    c.fillRect(0, 0, 1080, 1920);
+    c.fillRect(0, 0, W, H);
 
-    c.fillStyle = "rgba(255,255,255,0.08)";
-    c.fillRect(60, 180, 960, 1200);
+    // --- 배경 장식 파티클 ---
+    if (kind === "rare") {
+      const lvl = payload.rareLevel || 1;
+      const sparkColors = lvl === 2
+        ? ["#ff80e0", "#c060ff", "#ff60a0", "#e0a0ff", "#ffffff"]
+        : ["#ffd700", "#ffaa00", "#fff4a0", "#ffe080", "#ffffff"];
+      drawCardSparkles(c, 42, 50, 0, W, 0, H, sparkColors);
+    } else if (kind === "all-caught") {
+      drawCardSparkles(c, 99, 60, 0, W, 0, H, ["#60d0ff", "#a0e0ff", "#ff80c0", "#ffd700", "#80ffb0", "#ffffff"]);
+    } else if (kind === "top10") {
+      drawCardSparkles(c, 77, 45, 0, W, 0, H, ["#ffd700", "#ffb800", "#fff0a0", "#ffffff"]);
+    }
 
+    // --- TAPE 로고 ---
+    await drawImageOnCard(c, "tape_logo_pink.png", 60, 50, 320, 87);
+
+    // --- 타이틀 "TAPEMON GO!" ---
+    c.textAlign = "center";
     c.fillStyle = "#f4a9b8";
-    c.font = "bold 72px sans-serif";
-    c.fillText("TAPEMON GO!", 80, 300);
+    c.font = "bold 64px sans-serif";
+    c.fillText("TAPEMON GO!", W / 2, 210);
 
-    const lines = buildCardLines(kind, payload);
-    c.fillStyle = "#ffffff";
-    c.font = "bold 84px sans-serif";
-    c.fillText(lines[0], 80, 520);
-    c.font = "bold 52px sans-serif";
-    c.fillStyle = "#d0e6ff";
-    c.fillText(lines[1], 80, 620);
+    // ==========================================
+    // 카드 종류별 메인 콘텐츠
+    // ==========================================
 
-    c.fillStyle = "#9fb0cc";
-    c.font = "40px sans-serif";
-    c.fillText(`Score ${state.score} · Max Combo ${state.maxCombo}`, 80, 750);
+    if (kind === "rare") {
+      // ---- 레어 타겟 카드 ----
+      const lvl = payload.rareLevel || 1;
+      const accentColor = lvl === 2 ? "#e060ff" : "#ffd700";
+      const accentColorSoft = lvl === 2 ? "rgba(224,96,255,0.15)" : "rgba(255,215,0,0.15)";
+      const accentGlow = lvl === 2 ? "rgba(200,80,255,0.4)" : "rgba(255,200,0,0.4)";
 
-    await drawImageOnCard(c, "tape_logo_pink.png", 80, 60, 360, 98);
-    await drawImageOnCard(c, "tapemon_go_qr.png", 760, 1420, 220, 220);
+      // 티어 뱃지
+      c.font = "bold 40px sans-serif";
+      c.fillStyle = accentColor;
+      const tierLabel = lvl === 2 ? "★★ ULTRA RARE ★★" : "★ RARE ★";
+      c.fillText(tierLabel, W / 2, 290);
 
-    c.fillStyle = "#eaf0ff";
+      // 글로우 배경
+      drawGlowCircle(c, W / 2, 620, 340, accentGlow, 0.6);
+      drawGlowCircle(c, W / 2, 620, 240, accentGlow, 0.4);
+
+      // 메인 프레임 (라운드 사각형)
+      const frameX = 190, frameY = 350, frameW = 700, frameH = 560;
+      c.save();
+      drawRoundRect(c, frameX, frameY, frameW, frameH, 36);
+      c.fillStyle = accentColorSoft;
+      c.fill();
+      c.strokeStyle = accentColor;
+      c.lineWidth = 4;
+      c.stroke();
+      c.restore();
+
+      // 타겟 이미지 (중앙 크게)
+      if (payload.targetSrc) {
+        const imgSize = 380;
+        const imgX = W / 2 - imgSize / 2;
+        const imgY = 400;
+        await drawImageOnCard(c, payload.targetSrc, imgX, imgY, imgSize, imgSize);
+      }
+
+      // 이름
+      c.textAlign = "center";
+      c.font = "bold 72px sans-serif";
+      c.fillStyle = "#ffffff";
+      c.fillText(payload.targetName || "???", W / 2, 1010);
+
+      // 출현 확률
+      c.font = "bold 48px sans-serif";
+      c.fillStyle = accentColor;
+      c.fillText(`출현 확률 ${payload.spawnPercent}%`, W / 2, 1090);
+
+      // 메시지
+      c.font = "bold 56px sans-serif";
+      c.fillStyle = "#ffffff";
+      c.fillText("잡았다! 🎉", W / 2, 1200);
+
+      // 스코어/콤보 정보
+      c.font = "40px sans-serif";
+      c.fillStyle = "#9fb0cc";
+      c.fillText(`Score ${state.score} · Max Combo ${state.maxCombo}`, W / 2, 1300);
+
+      // 추가 스파클 장식 (프레임 주변)
+      const frameSparkColors = lvl === 2
+        ? ["#ff80e0", "#c060ff", "#ffffff"]
+        : ["#ffd700", "#ffaa00", "#ffffff"];
+      drawCardSparkles(c, 123, 20, frameX - 40, frameX + frameW + 40, frameY - 40, frameY + frameH + 40, frameSparkColors);
+
+    } else if (kind === "all-caught") {
+      // ---- 전체 포획 카드 ----
+
+      // 축하 뱃지
+      c.font = "bold 44px sans-serif";
+      c.fillStyle = "#60d0ff";
+      c.fillText("🏆 MONSTER MASTER 🏆", W / 2, 300);
+
+      // 메인 텍스트
+      c.font = "bold 72px sans-serif";
+      c.fillStyle = "#ffffff";
+      c.fillText("5종 전체 포획 성공!", W / 2, 420);
+
+      c.font = "bold 44px sans-serif";
+      c.fillStyle = "#ffe680";
+      c.fillText("진짜 몬스터 마스터 인정 👑", W / 2, 500);
+
+      // 5종 몬스터 이미지 프레임
+      const rowY = 580;
+      const cardSize = 160;
+      const gap = 20;
+      const totalW = TARGET_DEFS.length * cardSize + (TARGET_DEFS.length - 1) * gap;
+      const startX = (W - totalW) / 2;
+
+      for (let i = 0; i < TARGET_DEFS.length; i++) {
+        const def = TARGET_DEFS[i];
+        const cx = startX + i * (cardSize + gap);
+        const cy = rowY;
+
+        // 카드 배경
+        c.save();
+        drawRoundRect(c, cx, cy, cardSize, cardSize + 50, 18);
+        const isRare = def.id === "target4" || def.id === "target5";
+        c.fillStyle = isRare ? "rgba(255,215,0,0.15)" : "rgba(255,255,255,0.08)";
+        c.fill();
+        c.strokeStyle = isRare ? "rgba(255,215,0,0.6)" : "rgba(255,255,255,0.2)";
+        c.lineWidth = 2;
+        c.stroke();
+        c.restore();
+
+        // 몬스터 이미지
+        await drawImageOnCard(c, def.src, cx + 15, cy + 10, cardSize - 30, cardSize - 30);
+
+        // 이름
+        c.textAlign = "center";
+        c.font = "bold 22px sans-serif";
+        c.fillStyle = isRare ? "#ffd700" : "#d0e6ff";
+        c.fillText(targetDisplayName(def), cx + cardSize / 2, cy + cardSize + 35);
+      }
+
+      // 체크 마크 오버레이
+      c.font = "bold 36px sans-serif";
+      c.fillStyle = "#00ff80";
+      for (let i = 0; i < TARGET_DEFS.length; i++) {
+        const cx = startX + i * (cardSize + gap) + cardSize - 20;
+        c.fillText("✓", cx, rowY + 30);
+      }
+
+      // 구분선
+      c.strokeStyle = "rgba(255,255,255,0.1)";
+      c.lineWidth = 2;
+      c.beginPath();
+      c.moveTo(140, 870);
+      c.lineTo(W - 140, 870);
+      c.stroke();
+
+      // 날짜/시간
+      c.font = "36px sans-serif";
+      c.fillStyle = "#9fb0cc";
+      c.fillText(formatTime(new Date()), W / 2, 930);
+
+      // 스코어/콤보
+      c.font = "40px sans-serif";
+      c.fillStyle = "#9fb0cc";
+      c.fillText(`Score ${state.score} · Max Combo ${state.maxCombo}`, W / 2, 1000);
+
+      // 수집 아이콘 라인
+      c.font = "bold 36px sans-serif";
+      c.fillStyle = "#80ffb0";
+      c.fillText(`${TARGET_DEFS.length}/${TARGET_DEFS.length} COMPLETE`, W / 2, 1070);
+
+    } else if (kind === "top10") {
+      // ---- TOP 10 랭킹 카드 ----
+      const rank = payload.rank || 0;
+
+      // 글로우
+      drawGlowCircle(c, W / 2, 520, 300, "rgba(255,200,0,0.3)", 0.6);
+
+      // 랭킹 숫자 (크게)
+      c.font = "bold 200px sans-serif";
+      c.fillStyle = "#ffd700";
+      c.textAlign = "center";
+      c.fillText(`#${rank}`, W / 2, 520);
+
+      // TOP 10 뱃지
+      c.font = "bold 52px sans-serif";
+      c.fillStyle = "#ffffff";
+      c.fillText("🏅 TOP 10 진입 성공! 🏅", W / 2, 640);
+
+      // 이름
+      c.font = "bold 64px sans-serif";
+      c.fillStyle = "#ffe680";
+      c.fillText(`${payload.name || "???"}`, W / 2, 760);
+
+      c.font = "bold 40px sans-serif";
+      c.fillStyle = "#d0e6ff";
+      c.fillText("님 축하합니다!", W / 2, 830);
+
+      // 구분선
+      c.strokeStyle = "rgba(255,215,0,0.3)";
+      c.lineWidth = 2;
+      c.beginPath();
+      c.moveTo(200, 880);
+      c.lineTo(W - 200, 880);
+      c.stroke();
+
+      // 스탯 박스
+      const boxY = 920;
+      const boxW = 280;
+      const boxH = 140;
+      const boxGap = 30;
+      const statsStartX = (W - boxW * 3 - boxGap * 2) / 2;
+
+      const stats = [
+        { label: "Score", value: String(state.score) },
+        { label: "Max Combo", value: String(state.maxCombo) },
+        { label: "수집", value: `${state.caughtSet.size}/${TARGET_DEFS.length}` },
+      ];
+
+      for (let i = 0; i < stats.length; i++) {
+        const bx = statsStartX + i * (boxW + boxGap);
+        c.save();
+        drawRoundRect(c, bx, boxY, boxW, boxH, 16);
+        c.fillStyle = "rgba(255,215,0,0.08)";
+        c.fill();
+        c.strokeStyle = "rgba(255,215,0,0.25)";
+        c.lineWidth = 2;
+        c.stroke();
+        c.restore();
+
+        c.textAlign = "center";
+        c.font = "bold 28px sans-serif";
+        c.fillStyle = "#9fb0cc";
+        c.fillText(stats[i].label, bx + boxW / 2, boxY + 45);
+
+        c.font = "bold 48px sans-serif";
+        c.fillStyle = "#ffffff";
+        c.fillText(stats[i].value, bx + boxW / 2, boxY + 105);
+      }
+
+    } else {
+      // ---- 기본 카드 ----
+      const lines = buildCardLines(kind, payload);
+      c.textAlign = "center";
+      c.fillStyle = "#ffffff";
+      c.font = "bold 84px sans-serif";
+      c.fillText(lines[0], W / 2, 520);
+      c.font = "bold 52px sans-serif";
+      c.fillStyle = "#d0e6ff";
+      c.fillText(lines[1], W / 2, 620);
+      c.fillStyle = "#9fb0cc";
+      c.font = "40px sans-serif";
+      c.fillText(`Score ${state.score} · Max Combo ${state.maxCombo}`, W / 2, 750);
+    }
+
+    // --- 하단 공통: QR 코드 + URL ---
+    await drawImageOnCard(c, "tapemon_go_qr.png", W / 2 - 110, 1480, 220, 220);
+
+    c.textAlign = "center";
+    c.fillStyle = "rgba(234,240,255,0.6)";
     c.font = "32px sans-serif";
-    c.fillText(GAME_URL, 690, 1685);
+    c.fillText(GAME_URL, W / 2, 1740);
+
+    // --- 하단 장식 라인 ---
+    c.strokeStyle = "rgba(255,255,255,0.08)";
+    c.lineWidth = 1;
+    c.beginPath();
+    c.moveTo(100, 1460);
+    c.lineTo(W - 100, 1460);
+    c.stroke();
 
     return cardCanvas.toDataURL("image/png");
   }
@@ -593,7 +918,7 @@ import {
   async function showResultCard(kind, payload = {}) {
     const imageUrl = await makeResultCard(kind, payload);
     resultCardState.imageUrl = imageUrl;
-    resultCardState.title = buildCardLines(kind, payload)[0];
+    resultCardState.title = cardModalTitle(kind, payload);
     $("resultCardTitle").textContent = resultCardState.title;
     $("resultCardImage").src = imageUrl;
     $("resultCardModal").classList.remove("hidden");
@@ -621,6 +946,10 @@ import {
       showResultCard("rare", {
         targetName: USE_TARGET_IMAGE ? targetDisplayName(caughtDef) : `${caughtDef.emoji || "👾"} ${targetDisplayName(caughtDef)}`,
         spawnPercent: rareSpawnPercent(caughtDef),
+        targetSrc: caughtDef.src,
+        targetTier: caughtDef.tier,
+        targetEmoji: caughtDef.emoji,
+        rareLevel: caughtDef.id === "target5" ? 2 : 1,
       });
     }
 
