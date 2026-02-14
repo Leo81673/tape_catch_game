@@ -479,14 +479,45 @@ import {
     });
   }
 
-  // Coupon modal (persistent)
+  // Coupon modal (persistent) with 10-minute countdown
+  let couponCountdownInterval = null;
+  const COUPON_VALID_MS = 10 * 60 * 1000; // 10분
+
   function showCouponModal(code, timeText) {
     $("couponCode").textContent = code;
     $("couponTime").textContent = timeText;
     $("couponModal").classList.remove("hidden");
+    startCouponCountdown();
   }
   function hideCouponModal() {
+    if (couponCountdownInterval) {
+      clearInterval(couponCountdownInterval);
+      couponCountdownInterval = null;
+    }
     $("couponModal").classList.add("hidden");
+  }
+  function startCouponCountdown() {
+    if (couponCountdownInterval) clearInterval(couponCountdownInterval);
+    const el = $("couponCountdown");
+    const expireAt = Date.now() + COUPON_VALID_MS;
+    el.classList.remove("expired");
+
+    couponCountdownInterval = setInterval(() => {
+      const remaining = Math.max(0, expireAt - Date.now());
+      if (remaining <= 0) {
+        clearInterval(couponCountdownInterval);
+        couponCountdownInterval = null;
+        el.textContent = "⏰ 유효 기간이 만료되었습니다";
+        el.classList.add("expired");
+        // 3초 후 자동으로 모달 닫기
+        setTimeout(() => { hideCouponModal(); }, 3000);
+        return;
+      }
+      const totalSec = Math.ceil(remaining / 1000);
+      const min = Math.floor(totalSec / 60);
+      const sec = totalSec % 60;
+      el.textContent = `남은 시간: ${min}:${String(sec).padStart(2, "0")}`;
+    }, 200);
   }
   function makeCouponCode(now) {
     const chars = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
