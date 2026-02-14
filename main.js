@@ -13,7 +13,7 @@ import {
   const DEFAULT_SENSITIVITY = 2;   // 내부 계산용(현재 고정)
   const COUPON_COOLDOWN_MS = 3 * 60 * 60 * 1000; // 3시간
   const BASE_TARGET_HIT_RADIUS = 18; // 기본 히트박스 반경(px)
-  const USE_TARGET_IMAGE = false;     // PNG 사용할지 여부
+  const USE_TARGET_IMAGE = true;     // PNG 사용할지 여부
   const BUILD_VERSION = "5콤보시 샷 쿠폰 증정!"; // 배포 확인용 버전(코드 수정 시 올리기)
   const GAME_URL = "qr.codes/5pilL6";
   const COMBO_DIFFICULTY_SETTINGS = {
@@ -39,7 +39,7 @@ import {
   const COIN_RECHARGE_MS = 30 * 1000; // 코인 충전 시간 (30초)
 
   // ===== 위치 파악 설정 =====
-  const ENABLE_LOCATION_CHECK = false; // true: 위치 파악 켜기, false: 끄기
+  const ENABLE_LOCATION_CHECK = true; // true: 위치 파악 켜기, false: 끄기
   const TARGET_LAT = 37.5344;         // 서울특별시 용산구 이태원로 위도
   const TARGET_LNG = 126.9954;        // 서울특별시 용산구 이태원로 경도
   const LOCATION_RADIUS_M = 150;      // 허용 반경 (미터)
