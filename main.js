@@ -1849,6 +1849,26 @@ import {
     }, () => {});
   }
 
+  // 위치 차단 모달 관리자 우회: 타이틀 5회 클릭 → 비밀번호 입력 → 게임 시작
+  let locOverrideClickCount = 0;
+  let locOverrideClickTimer = null;
+  $("locationTitle").addEventListener("click", () => {
+    locOverrideClickCount++;
+    if (locOverrideClickTimer) clearTimeout(locOverrideClickTimer);
+    locOverrideClickTimer = setTimeout(() => { locOverrideClickCount = 0; }, 2000);
+    if (locOverrideClickCount >= 5) {
+      locOverrideClickCount = 0;
+      const pw = prompt("관리자 비밀번호를 입력하세요:");
+      if (pw === ADMIN_PASSWORD) {
+        $("locationModal").classList.add("hidden");
+        state.locationVerified = true;
+        startGame();
+      } else if (pw !== null) {
+        alert("비밀번호가 올바르지 않습니다.");
+      }
+    }
+  });
+
   let adminClickCount = 0;
   let adminClickTimer = null;
   $("lbTitle").addEventListener("click", () => {
