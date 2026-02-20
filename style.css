@@ -263,3 +263,17 @@ body{
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
+
+/* 기간 내 최고 순위 */
+.hr-filter{display:flex;flex-direction:column;gap:10px;margin-bottom:12px}
+.hr-checkbox-label{display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer}
+.hr-checkbox-label input[type="checkbox"]{width:18px;height:18px;accent-color:#6ee7ff;cursor:pointer}
+.hr-date-inputs{display:flex;gap:10px;flex-wrap:wrap}
+.hr-date-row{display:flex;align-items:center;gap:6px;font-size:13px}
+.hr-date-row label{white-space:nowrap;color:var(--muted);min-width:42px}
+.hr-date{padding:8px 10px;font-size:13px;width:160px;color-scheme:dark}
+.hr-search-btn{width:100%;padding:10px;font-size:14px}
+.hr-result-wrap{max-height:45vh;overflow-y:auto;border:1px solid rgba(255,255,255,0.08);border-radius:12px}
+.hr-result-wrap .adm-row{grid-template-columns:36px 1fr 46px 40px 50px}
+.hr-rank-col{font-weight:700;text-align:center;color:#ffd700}
+.hr-date-inputs.disabled{opacity:0.35;pointer-events:none}

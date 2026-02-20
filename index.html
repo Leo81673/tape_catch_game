@@ -124,6 +124,7 @@
           <button id="btnAdminReset" class="btn admin-btn">리더보드 초기화</button>
           <button id="btnAdminExport" class="btn admin-btn">누적 데이터 CSV 다운로드</button>
           <button id="btnAdminView" class="btn admin-btn">누적 데이터 조회</button>
+          <button id="btnAdminHighRank" class="btn admin-btn">기간 내 최고 순위</button>
         </div>
 
         <!-- 난이도 설정 가이드 -->
@@ -146,6 +147,38 @@
       </div>
       <div class="modal-actions">
         <button id="btnAdminClose" class="btn primary">닫기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 기간 내 최고 순위 모달 -->
+  <div id="highRankModal" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="modal-card" style="max-width:600px;max-height:90vh;overflow-y:auto;">
+      <div class="modal-title">기간 내 최고 순위</div>
+      <div class="modal-body">
+        <div class="hr-filter">
+          <label class="hr-checkbox-label">
+            <input type="checkbox" id="hrAllPeriod" />
+            <span>모든 기간</span>
+          </label>
+          <div id="hrDateInputs" class="hr-date-inputs">
+            <div class="hr-date-row">
+              <label>시작일</label>
+              <input type="date" id="hrDateFrom" class="input hr-date" />
+            </div>
+            <div class="hr-date-row">
+              <label>종료일</label>
+              <input type="date" id="hrDateTo" class="input hr-date" />
+            </div>
+          </div>
+          <button id="btnHrSearch" class="btn primary hr-search-btn">조회</button>
+        </div>
+        <div id="hrResultWrap" class="hr-result-wrap hidden">
+          <div id="hrResultTable" class="admin-data-table"></div>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button id="btnHrClose" class="btn primary">닫기</button>
       </div>
     </div>
   </div>

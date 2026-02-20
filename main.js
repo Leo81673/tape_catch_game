@@ -1972,6 +1972,110 @@ import {
     }
   });
 
+  // ===== 기간 내 최고 순위 =====
+  $("btnAdminHighRank").addEventListener("click", () => {
+    $("highRankModal").classList.remove("hidden");
+    // 기본 날짜: 오늘
+    const today = new Date().toISOString().slice(0, 10);
+    $("hrDateTo").value = today;
+    $("hrDateFrom").value = today;
+  });
+
+  $("btnHrClose").addEventListener("click", () => {
+    $("highRankModal").classList.add("hidden");
+    $("hrResultWrap").classList.add("hidden");
+  });
+
+  $("hrAllPeriod").addEventListener("change", () => {
+    const checked = $("hrAllPeriod").checked;
+    const dateInputs = $("hrDateInputs");
+    if (checked) {
+      dateInputs.classList.add("disabled");
+    } else {
+      dateInputs.classList.remove("disabled");
+    }
+  });
+
+  $("btnHrSearch").addEventListener("click", async () => {
+    if (!firebaseReady || !db) { alert("Firebase 연결 실패"); return; }
+
+    const allPeriod = $("hrAllPeriod").checked;
+    const fromStr = $("hrDateFrom").value;
+    const toStr = $("hrDateTo").value;
+
+    if (!allPeriod && (!fromStr || !toStr)) {
+      alert("시작일과 종료일을 입력해주세요.");
+      return;
+    }
+
+    const wrap = $("hrResultWrap");
+    const table = $("hrResultTable");
+    wrap.classList.remove("hidden");
+    table.innerHTML = `<div class="adm-row adm-header"><span>#</span><span>아이디</span><span>콤보</span><span>수집</span><span>점수</span></div>`;
+
+    try {
+      const snap = await getDocs(collection(db, "scores"));
+      const allRows = [];
+      snap.forEach((d) => allRows.push(d.data()));
+
+      // 기간 필터
+      let filtered = allRows;
+      if (!allPeriod) {
+        const fromTs = new Date(fromStr + "T00:00:00+09:00").getTime() / 1000;
+        const toTs = new Date(toStr + "T23:59:59+09:00").getTime() / 1000;
+        filtered = allRows.filter((r) => {
+          const ts = r.createdAt?.seconds || 0;
+          return ts >= fromTs && ts <= toTs;
+        });
+      }
+
+      // 같은 아이디(name)에 대해 최고 기록만 남기기
+      // 최고 기록 기준: 맥스콤보 > 수집 > 점수
+      const bestByName = {};
+      for (const r of filtered) {
+        const name = r.name || "NONAME";
+        const existing = bestByName[name];
+        if (!existing) {
+          bestByName[name] = r;
+          continue;
+        }
+        const ec = Number(existing.maxCombo) || 0;
+        const em = Number(existing.monsters) || 0;
+        const es = Number(existing.score) || 0;
+        const rc = Number(r.maxCombo) || 0;
+        const rm = Number(r.monsters) || 0;
+        const rs = Number(r.score) || 0;
+        if (rc > ec || (rc === ec && rm > em) || (rc === ec && rm === em && rs > es)) {
+          bestByName[name] = r;
+        }
+      }
+
+      const rows = Object.values(bestByName);
+      // 콤보 > 수집 > 점수 내림차순 정렬
+      rows.sort((a, b) => {
+        const byCombo = (Number(b.maxCombo) || 0) - (Number(a.maxCombo) || 0);
+        if (byCombo !== 0) return byCombo;
+        const byMonsters = (Number(b.monsters) || 0) - (Number(a.monsters) || 0);
+        if (byMonsters !== 0) return byMonsters;
+        return (Number(b.score) || 0) - (Number(a.score) || 0);
+      });
+
+      if (rows.length === 0) {
+        table.innerHTML += `<div class="adm-row"><span colspan="5">해당 기간 데이터 없음</span></div>`;
+        return;
+      }
+
+      for (let i = 0; i < rows.length; i++) {
+        const r = rows[i];
+        const safeName = escapeHtml((r.name || "NONAME").slice(0, 15));
+        table.innerHTML += `<div class="adm-row"><span class="hr-rank-col">${i + 1}</span><span>${safeName}</span><span style="text-align:center">${r.maxCombo || 0}</span><span style="text-align:center">${r.monsters || 0}</span><span style="text-align:center">${r.score || 0}</span></div>`;
+      }
+    } catch (err) {
+      console.error("[Admin] 최고 순위 조회 실패", err);
+      table.innerHTML += `<div class="adm-row"><span>조회 실패: ${escapeHtml(err?.message || "")}</span></div>`;
+    }
+  });
+
   // roundRect polyfill (older Safari)
   if (!CanvasRenderingContext2D.prototype.roundRect) {
     CanvasRenderingContext2D.prototype.roundRect = function(x,y,w,h,r){
